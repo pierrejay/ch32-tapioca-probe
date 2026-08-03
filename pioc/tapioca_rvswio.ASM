@@ -1,5 +1,5 @@
 ;==============================================================================
-; tapioca_rvswio.ASM - WCH RVSWIO (one-wire) PIOC engine (M3).
+; tapioca_rvswio.ASM - WCH RVSWIO (one-wire) PIOC engine.
 ;
 ; One contiguous DMI transaction per mailbox round-trip on IO1/PC19.
 ; Emission was HIL-validated on a logic analyser (9/9 frames bit-exact); the

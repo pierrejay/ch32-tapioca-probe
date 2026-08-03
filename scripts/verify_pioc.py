@@ -1,9 +1,4 @@
-# PlatformIO pre-build hook: assert the committed PIOC blobs match their source.
-#
-# Runs assemble.py (without --write) on each blob before every build, so an 
-# .ASM edited without regenerating its _inc.h (or a hand-edited _inc.h) fails 
-# the build instead of silently shipping a stale blob.
-# assemble.py exits non-zero on mismatch.
+# Fail the build when a generated PIOC blob differs from its ASM source.
 
 Import("env")
 

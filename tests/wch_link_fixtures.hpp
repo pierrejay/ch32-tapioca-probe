@@ -3,11 +3,8 @@
 // (cnlohr/ch32fun). Full framing spec + source line citations:
 // docs/wch-link-usb-protocol.md.
 //
-// These fixtures are the M2 oracle: the future WchLink command decoder is driven
-// against `request` and its emitted reply is checked against `reply` under the
-// per-fixture `contract`. Bytes the host actually branches on are VERIFIED; bytes
-// the host ignores (under FORCE_EXTERNAL_CHIP_DETECTION) are IGNORED placeholders
-// to be tightened from a genuine WCH-LinkE capture during HIL.
+// Each contract records which reply fields minichlink uses. Ignored bytes remain
+// placeholders until confirmed against a WCH-LinkE capture.
 #pragma once
 
 #include <stddef.h>

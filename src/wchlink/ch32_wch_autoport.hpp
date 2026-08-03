@@ -5,19 +5,9 @@
 #include "ch32_pioc_rvswio.hpp"
 #include "ch32_pioc_rvswd.hpp"
 
-// Unified auto-detecting WCH-Link transport (the shipping product). Carries BOTH
-// the one-wire RVSWIO and two-wire RVSWD PIOC engines and selects whichever the
-// target answers on - like a real WCH-LinkE, with no rebuild/reflash per target.
-//
-// connect() tries RVSWD (two-wire) first, then RVSWIO (one-wire). Each engine's
-// own connect() runs the WCH unlock and requires DMCFGR to read back 0x5aa5, so it
-// doubles as a "does the target answer on this transport?" probe. The winner is
-// cached for the session; readDmi/writeDmi delegate to it. A later reconnect
-// re-detects, so swapping a CH32V003 for a CH32V307 just works.
-//
-// Shared pinout: PC19 = DATA (SWIO and SWDIO), PC18 = CLK (RVSWD only). One blob
-// runs at a time; connect() loads each in turn. See docs/wch-rvswd-protocol.md and
-// docs/wch-rvswio-protocol.md for the two wire transports.
+// Auto-detecting WCH-Link transport. connect() probes RVSWD, then RVSWIO, and
+// retains the first transport returning a valid DMSTATUS. PC19 carries data for
+// both protocols; PC18 carries the RVSWD clock.
 class Ch32WchAutoPort final : public WchLink::IDmi
 {
 public:

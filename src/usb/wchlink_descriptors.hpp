@@ -2,15 +2,8 @@
 
 #include <stdint.h>
 
-// USB descriptors for the WCH-Link Tapioca personality. minichlink -C linke
-// matches on VID:PID 1a86:8010, claims interface 0, and uses bulk OUT 0x01 /
-// bulk IN 0x81 (docs/wch-link-usb-protocol.md). It does not inspect the strings.
-//
-// Compatibility identity only: 1a86:8010 is WCH's VID:PID, borrowed so stock host
-// tools detect the probe with no config (see the USB-identity disclaimer in the
-// README). The strings are honest (manufacturer "Tapioca") since the host ignores
-// them; only the numeric VID:PID is borrowed. This never touches the DirtyJTAG
-// identity 1209:C0CA.
+// WCH-Link-compatible descriptors used by minichlink -C linke.
+// See the README disclaimer before distributing the borrowed VID:PID.
 namespace WchLinkUsbDescriptors
 {
 

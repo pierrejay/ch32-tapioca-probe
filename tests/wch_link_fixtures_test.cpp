@@ -1,15 +1,4 @@
-// wch_link_fixtures_test.cpp - self-consistency checks for the WCH-Link fixtures.
-//
-// This runs green before the M2 decoder exists: it proves the extracted oracle
-// (docs/wch-link-usb-protocol.md) is internally well-formed - correct request
-// framing, 9-byte DMI shape, big-endian data round-trips, and status/contract
-// coherence. When the WchLink decoder lands, its test #includes the same header
-// and drives request->reply against these same fixtures.
-//
-// Build:
-//   c++ -std=c++17 -Wall -Wextra -Isrc -Itests \
-//     tests/wch_link_fixtures_test.cpp -o tests/wch_link_fixtures_test
-//   ./tests/wch_link_fixtures_test
+// Self-consistency checks for WCH-Link request/reply fixtures.
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>

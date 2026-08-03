@@ -74,13 +74,12 @@ addr-target[42:49] · data-target[49:81] · status[81:83] · parity[83:84]`.
 
 ## PIOC engine — parameterized shift register
 
-The blob (`pioc/tapioca_rvswd.ASM`, adapted from the Tapioca MDIO-master primitive:
-clock on PC18/OUT0, bidir data on PC19 via `BP2F` drive / `BG2F,BCTC` sample, DIR1
-turnaround, GO/STATUS doorbell) is a **dumb shift register**. All framing, parity and
-packing live in C++ (`rvswd_frame.hpp` / `Ch32PiocRvswd`); the blob only:
+The blob (`pioc/tapioca_rvswd.ASM`) clocks PC18/OUT0 and drives or samples PC19
+with `BS`/`BC`, `RCL` and `BCTC`. All framing, parity and packing live in C++
+(`rvswd_frame.hpp` / `Ch32PiocRvswd`); the blob only:
 
 1. Wait for `CTRL` GO (bit7). Mark `STATUS` busy.
-2. Bring `SWCLK`/`SWDIO` up (latch high before setting DIR → no bring-up glitch).
+2. Enable `SWCLK`/`SWDIO` (latch high before setting DIR to avoid a startup glitch).
 3. Emit **START** (drop `SWDIO` while `SWCLK` high).
 4. Clock out **`HOSTBITS`** bits from the host mailbox bytes, MSB first (fall-first
    cadence). `HOSTBITS` is a mailbox byte, not hardcoded.

@@ -1,11 +1,5 @@
-// activity_led.hpp - activity LED: flickers while the probe is talking to a target,
-// off when idle. Default = WeAct CH32X035 on-board LED (PB12, active-high).
-//
-// notify() on each target transaction (stamps the time), tick() every main-loop
-// iteration (drives the pin). No timer, no delay.
-//
-// Override the pin with -D LED_PORT=GPIOA and/or -D LED_PIN=<0..15>.
-// Disable it entirely with -D LED_PIN=-1 (the pin is left untouched).
+// Activity LED, defaulting to the WeAct board's active-high PB12.
+// Override LED_PORT/LED_PIN at build time; LED_PIN=-1 disables it.
 #pragma once
 
 #include "ch32_sdk.hpp"

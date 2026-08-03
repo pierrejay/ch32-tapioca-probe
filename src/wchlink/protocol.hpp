@@ -5,8 +5,8 @@
 
 #include "dmi_interface.hpp"
 
-// WCH-Link (minichlink -C linke) USB command decoder. Framing spec and the
-// byte-exact oracle it is validated against:
+// WCH-Link (minichlink -C linke) USB command decoder. Protocol documentation and
+// byte-level test fixtures:
 //   docs/wch-link-usb-protocol.md
 //   tests/wch_link_fixtures.hpp
 //

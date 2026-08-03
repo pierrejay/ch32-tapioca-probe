@@ -5,8 +5,7 @@ it maps onto the PIOC engine. This is the spec `pioc/tapioca_rvswio.ASM` and
 `Ch32PiocRvswio` implement. It carries the same DMI semantics as the two-wire RVSWD
 path ([`wch-rvswd-protocol.md`](wch-rvswd-protocol.md)); only the wire encoding differs.
 
-Derived from cnlohr's known-good bit-bang references (the behavioral oracle, not
-guessed):
+Timing and framing are based on cnlohr's bit-bang implementations:
 - `rv003usb/rvswdio_programmer/bitbang_rvswdio.h` — portable bit + DMI framing.
 - `rv003usb/rvswdio_programmer/bitbang_rvswdio_ch32v003.h` — timer/PWM timing
   measured on real CH32V003 silicon (the numbers below).

@@ -1,5 +1,5 @@
 ;==============================================================================
-; tapioca_rvswd.ASM - WCH RVSWD (two-wire) PIOC engine (M5).
+; tapioca_rvswd.ASM - WCH RVSWD (two-wire) PIOC engine.
 ;
 ; One DMI transaction per mailbox round-trip. IO0/PC18 = SWCLK (always output,
 ; bit-banged), IO1/PC19 = SWDIO (bidirectional). Both idle HIGH. The host
@@ -16,9 +16,8 @@
 ; Host bits are pre-packed by C++ (addr, op, parity=XOR(addr,op), park, padding,
 ; data, parity=XOR(data)); this engine is value-agnostic.
 ;
-; Drive/sample use only opcodes proven on this silicon by the RVSWIO engine
-; (BS/BC OUT1, BCTC, RCL) - NOT BP2F/BG2F, which are unvalidated here and left
-; SWDIO undriven in the first bring-up (garbage frames).
+; BP2F/BG2F are avoided because they do not drive/sample SWDIO correctly on the
+; tested CH32X035 revision. BS/BC, BCTC and RCL are used instead.
 ;
 ; Mailbox (STATUS published last; GO/STATUS generation boundary as in RVSWIO):
 ;   REG0  CTRL    bit7 GO, bit0 READ (0 = write, 1 = read)

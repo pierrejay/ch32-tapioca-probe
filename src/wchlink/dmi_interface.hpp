@@ -5,10 +5,8 @@
 namespace WchLink
 {
 
-// Outcome of a single DMI transaction. The brief requires the port to expose
-// enough status to distinguish timeout, parity failure, target busy and protocol
-// failure - a boolean is not enough for real recovery policy. The USB command
-// decoder maps these onto the WCH-Link reply status byte.
+// Outcome of a DMI transaction, mapped to the WCH-Link reply status by the USB
+// command decoder.
 enum class DmiStatus : uint8_t
 {
     Ok,

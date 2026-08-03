@@ -55,7 +55,7 @@ int main()
         uint8_t full[R::kFrameBytes];
         buildFullFrame(g.bits, full);
 
-        // Sanity: our field decode of the raw capture matches the oracle values.
+        // Decoded fields must match the captured values.
         assert(R::getField(full, 0, 7) == g.addr);
         assert(R::getBit(full, 7) == (g.rw == 'W' ? 1 : 0));
         assert(R::getField(full, 14, 32) == g.data);

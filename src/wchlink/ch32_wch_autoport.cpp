@@ -6,11 +6,7 @@ namespace
 {
 constexpr uint8_t kDmStatus = 0x11; // RISC-V Debug Module status register
 
-// Does a target answer on this transport? Best-effort init (the engine's connect()
-// runs the WCH unlock + sets dmactive), then read DMSTATUS and require a valid
-// RISC-V debug version field (2 = 0.13, 3 = 1.0) with valid parity. This is a
-// stronger, unlock-independent signal than the per-engine 0x5aa5 check: a live wire
-// answers with a sane DMSTATUS; the wrong wire floats (version 0xf / parity fault).
+// Accept only valid RISC-V debug versions from DMSTATUS.
 bool wireResponds(WchLink::IDmi& port)
 {
     port.connect(); // best-effort; ignore its strict 0x5aa5 verdict
@@ -23,8 +19,7 @@ bool wireResponds(WchLink::IDmi& port)
 
 void Ch32WchAutoPort::init()
 {
-    // Both engines share the same RCC/GPIO bring-up and park PC18/PC19 as inputs;
-    // initialising both leaves either ready to be loaded by connect().
+    // Both engines leave the shared pins as inputs.
     rvswio_.init();
     rvswd_.init();
     transport_ = Transport::None;
@@ -63,8 +58,6 @@ bool Ch32WchAutoPort::connect()
 
 void Ch32WchAutoPort::ensureDetected()
 {
-    // connect() delegates to the concrete engines' connect()/writeDmi, never back to
-    // this port, so there is no recursion. A failed probe leaves transport_ == None.
     if (transport_ == Transport::None) connect();
 }
 

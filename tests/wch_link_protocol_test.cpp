@@ -1,11 +1,4 @@
-// wch_link_protocol_test.cpp - drives the WCH-Link command decoder against the
-// byte-exact minichlink oracle (tests/wch_link_fixtures.hpp).
-//
-// Build:
-//   c++ -std=c++17 -Wall -Wextra -Isrc -Isrc/wchlink -Itests \
-//     src/wchlink/protocol.cpp tests/wch_link_protocol_test.cpp \
-//     -o tests/wch_link_protocol_test
-//   ./tests/wch_link_protocol_test
+// WCH-Link command decoder tests using byte-level minichlink fixtures.
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -90,7 +83,7 @@ int main()
         assert(!core.connected());
     }
 
-    // ---- DMI read: big-endian data from the fake, exact oracle reply -----------
+    // ---- DMI read: big-endian data from the fake, exact fixture reply ----------
     {
         FakeDmiPort port;
         port.readValue = F::dmiReplyData(F::kDmiReadReply); // 0x00030382

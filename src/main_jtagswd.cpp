@@ -7,9 +7,7 @@
 #include "activity_led.hpp"
 #include "usb_dirtyjtag.hpp"
 
-// Physical debug-wire ownership. None is the only state from which a different
-// transport may claim the probe; there is no implicit JTAG/SWD handover. (These
-// three lines were previously src/wire_mode.hpp + a trivial unit test.)
+// JTAG and SWD may retain ownership until they disconnect or become idle.
 enum class WireMode : uint8_t { None, Jtag, Swd };
 
 constexpr bool canUseWire(WireMode owner, WireMode requester)

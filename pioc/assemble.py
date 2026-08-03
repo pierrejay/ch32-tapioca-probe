@@ -1,34 +1,13 @@
 #!/usr/bin/env python3
-"""
-assemble.py - a tiny native assembler for PIOC (RISC8B) `.ASM` files.
-
-It parses a PIOC `.ASM`, resolves symbols from `pioc_sfr.inc`, encodes the
-program to 16-bit little-endian words, and writes the generated C `_inc.h` blob
-when asked. Without `--write`, it assembles in memory and checks that the
-committed `_inc.h` still matches the source.
+"""Assemble PIOC sources and verify or update their generated C blobs.
 
     python3 assemble.py                 # assemble tapioca_swd and check its header
     python3 assemble.py foo.ASM         # check foo.ASM against foo_inc.h
     python3 assemble.py foo.ASM --write # (re)generate foo_inc.h from foo.ASM
 
-SCOPE / HONESTY: the opcode table below covers exactly the instructions whose
-encoding we have ground-truthed - the ones used by the validated ring blob (their
-bytes match a real on-silicon blob), plus a few read straight from the WCH RISC8B
-manual. Any mnemonic NOT in the table is a hard error, on purpose: rather than
-emit a guessed encoding, the tool tells you to confirm the real `C=xxxx` from a
-verified `.LST` (the WCH EVT examples) and add it here. A guessed opcode that
-"looks right" is exactly what byte-verification exists to prevent.
-
-This copy is kept aligned with Tapioca's assembler. The additional opcodes and
-destination forms are verified against the official WCH CHRISC8B manual and
-EVT .LST files.
-
-Independent cross-check: github.com/andelf/pioc (a Rust PIOC reverse) annotates
-the ISA bit-for-bit in its OpCode enum. Its table agrees with every opcode we use
-(e.g. `CLR f = 00000001 ffffffff` = 0x0100|f, WB_PORT_XOR0_1=7) and corroborates
-the two below we'd only read from the manual (RET, MOVL). Its byte encoder itself
-is unfinished (`todo!()` past a handful of opcodes), so it's a reference, not a
-tool we can use - but a useful map if we extend toward the master (step 2).
+The opcode table is intentionally restricted to encodings verified against WCH
+EVT listings, the RISC8B manual, or the independent andelf/pioc ISA table.
+Unsupported mnemonics fail instead of emitting a guessed encoding.
 """
 import sys
 import re
@@ -126,9 +105,7 @@ def assemble(asm_path):
         parts = l.split(None, 1)
         mn = parts[0].upper()
         args = [t.strip() for t in parts[1].split(",")] if len(parts) > 1 else []
-        # Tapioca historically allowed the WCH shorthand `INC f`, `DEC f` and
-        # `RCL f`, whose implicit destination is F. Keep that syntax while also
-        # accepting the explicit `f,F` form.
+        # INC/DEC/RCL accept the WCH shorthand with an implicit F destination.
         if mn in ("INC", "DEC", "RCL") and len(args) == 1:
             args.append("F")
         insns.append((addr, mn, args))

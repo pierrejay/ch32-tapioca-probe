@@ -1,4 +1,4 @@
-// time.cpp - TIM2-backed monotonic timebase (lifted from the sibling Tapioca HAL).
+// TIM2-backed monotonic timebase.
 #include "time.hpp"
 #include "ch32_sdk.hpp"
 

@@ -1,18 +1,5 @@
-// WCH-Link Tapioca product entry point.
-//
-// Second build-time-selected personality. A WCH-LinkE-compatible USB probe
-// (1a86:8010, iface 0, EP1 OUT/IN) whose commands are decoded by WchLink::Core and
-// executed against a IDmi. It shares nothing at link time with the
-// DirtyJTAG/CMSIS-DAP product beyond the HAL. See docs/wch-link-usb-protocol.md for
-// the host command set and docs/wch-rvswd-protocol.md / docs/wch-rvswio-protocol.md
-// for the two wire transports.
-//
-// Transport is selected at build time:
-//   default                  -> Ch32WchAutoPort (SHIPPING product: auto-detects
-//                               RVSWD vs RVSWIO per target, like a real WCH-LinkE)
-//   -D WCH_TRANSPORT_RVSWD   -> Ch32PiocRvswd  (two-wire only; bring-up/debug)
-//   -D WCH_TRANSPORT_RVSWIO  -> Ch32PiocRvswio (one-wire only; bring-up/debug)
-// The emit self-test needs a concrete transport, so its envs set one explicitly.
+// WCH-LinkE-compatible USB probe. The default build detects RVSWIO or RVSWD;
+// WCH_TRANSPORT_RVSWD and WCH_TRANSPORT_RVSWIO select one for diagnostics.
 
 #include "ch32_sdk.hpp"
 #include "time.hpp"
@@ -33,13 +20,8 @@ using WchPort = Ch32WchAutoPort;
 
 #ifdef WCH_EMIT_SELFTEST
 
-// Bring-up self-test (env:wchlink-rvswio-emit / env:wchlink-rvswd-emit).
-// Continuously emits a known DMI write frame so the wire can be captured on a
-// logic analyser with no host interaction and no target required.
-//   Frame: write DMI 0x10 (DMCONTROL) = 0x80000001.
-// On RVSWD this clocks a 48-bit host frame on SWCLK(PC18)/SWDIO(PC19); on RVSWIO
-// it is a pulse-width-encoded frame on PC19. Either way it confirms bit order and
-// timing before the full USB/HIL path is exercised.
+// Emit a repeated DMCONTROL write for logic-analyser measurements.
+// Frame: DMI 0x10 = 0x80000001.
 static WchPort g_emitPort;
 
 int main(void)
