@@ -115,11 +115,16 @@ bool UsbWchLink::takeSessionReset()
     sessionResetPending_ = false;
     if (pending)
     {
-        // Drop any command queued before the reset so it cannot reclaim the wire.
         packetPending_ = false;
         packetTaken_ = false;
         pendingLength_ = 0;
-        if (!txBusy_) armOut();
+
+        // Abort an unacknowledged reply without changing the endpoint data toggles.
+        USBFSD->UEP1_TX_LEN = 0;
+        USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
+                              USBFS_UEP_T_RES_NAK;
+        txBusy_ = false;
+        armOut();
     }
     NVIC_EnableIRQ(USBFS_IRQn);
     return pending;

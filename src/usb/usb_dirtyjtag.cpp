@@ -150,16 +150,24 @@ bool UsbDirtyJtag::takeSessionReset()
     sessionResetPending_ = false;
     if (pending)
     {
-        // Do not let a packet queued before suspend/reset immediately reclaim
-        // the wire after main has released it.
         packetPending_ = false;
         packetTaken_ = false;
         pendingLength_ = 0;
         dapPacketPending_ = false;
         dapPacketTaken_ = false;
         dapPendingLength_ = 0;
-        if (!txBusy_) armOut();
-        if (!dapTxBusy_) armCmsisDapOut();
+
+        // Abort unacknowledged replies without changing endpoint data toggles.
+        USBFSD->UEP2_TX_LEN = 0;
+        USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
+                              USBFS_UEP_T_RES_NAK;
+        txBusy_ = false;
+        USBFSD->UEP3_TX_LEN = 0;
+        USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
+                              USBFS_UEP_T_RES_NAK;
+        dapTxBusy_ = false;
+        armOut();
+        armCmsisDapOut();
     }
     NVIC_EnableIRQ(USBFS_IRQn);
     return pending;
