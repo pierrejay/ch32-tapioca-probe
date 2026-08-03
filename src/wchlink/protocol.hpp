@@ -36,11 +36,8 @@ struct Result
 
 // Session-owning command decoder.
 //
-// INVARIANT: processPacket ALWAYS produces a non-empty reply (responseLength >=
-// 1), including for truncated and unsupported commands. minichlink issues a
-// blocking EP1 IN read after every command (pgm-wch-linke.c:74-81); a zero-length
-// reply would stall the host for the full 5 s timeout. The caller must send
-// responseLength bytes regardless of status.
+// With a valid output buffer of at least four bytes, processPacket always produces
+// a non-empty reply. The USB caller supplies a full 64-byte packet buffer.
 class Core
 {
 public:

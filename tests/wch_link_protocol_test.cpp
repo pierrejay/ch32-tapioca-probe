@@ -50,6 +50,29 @@ int main()
 {
     uint8_t tx[64];
 
+    // ---- invalid buffers: no out-of-bounds write -------------------------------
+    {
+        FakeDmiPort port;
+        WchLink::Core core;
+        uint8_t guarded[] = {0xa5, 0xa5, 0xa5, 0xa5, 0xa5};
+
+        auto r = core.processPacket(port, F::kIdentifyReq, sizeof(F::kIdentifyReq),
+                                    guarded + 1, 3);
+        assert(r.responseLength == 0);
+        for (uint8_t byte : guarded) assert(byte == 0xa5);
+
+        r = core.processPacket(port, F::kIdentifyReq, sizeof(F::kIdentifyReq),
+                               nullptr, 64);
+        assert(r.responseLength == 0);
+
+        r = core.processPacket(port, nullptr, 0, tx, sizeof(tx));
+        assert(r.responseLength == 4 && tx[0] == 0x82);
+
+        r = core.processPacket(port, F::kIdentifyReq, sizeof(F::kIdentifyReq), tx, 4);
+        assert(r.responseLength == 4 && tx[0] == 0x82);
+        assert(port.connectCalls == 0 && port.readCalls == 0 && port.writeCalls == 0);
+    }
+
     // ---- identify: exact bytes + session reset ---------------------------------
     {
         FakeDmiPort port;

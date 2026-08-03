@@ -113,9 +113,12 @@ void Core::reset(IDmi& port)
 Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
                            uint8_t* tx, size_t txCapacity)
 {
-    // Every reply here is <= 9 bytes; a 64-byte EP buffer always fits. Guard
-    // defensively so a caller with a tiny buffer still gets a bounded reply.
-    if (txCapacity < kDmiReplyLen || rxLength < 2 || rx[0] != kCmdPrefix)
+    if (tx == nullptr || txCapacity < 4)
+        return {0, Status::UnsupportedCommand};
+
+    // Four bytes are enough for a bounded error reply; command replies need nine.
+    if (rx == nullptr || txCapacity < kDmiReplyLen ||
+        rxLength < 2 || rx[0] != kCmdPrefix)
         return ack(tx, 0x00, Status::UnsupportedCommand);
 
     switch (rx[1])
