@@ -67,6 +67,48 @@ bool room(size_t offset, size_t count, size_t capacity)
     return offset <= capacity && count <= capacity - offset;
 }
 
+enum class TransferPacketCheck : uint8_t
+{
+    Ok,
+    Invalid,
+    ResponseOverflow,
+};
+
+TransferPacketCheck checkTransferPacket(const uint8_t* request,
+                                        size_t requestLength,
+                                        size_t responseCapacity)
+{
+    if (requestLength < 3 || responseCapacity < 3)
+        return TransferPacketCheck::Invalid;
+
+    size_t input = 3;
+    size_t output = 3;
+    bool overflow = false;
+    for (uint8_t index = 0; index < request[2]; ++index)
+    {
+        if (!room(input, 1, requestLength)) return TransferPacketCheck::Invalid;
+        const uint8_t transferRequest = request[input++];
+        const bool read = (transferRequest & TransferRead) != 0;
+
+        if (transferRequest & TransferMatchValue)
+        {
+            if (!room(input, 4, requestLength)) return TransferPacketCheck::Invalid;
+            input += 4;
+        }
+        else if (read)
+        {
+            if (!room(output, 4, responseCapacity)) overflow = true;
+            else output += 4;
+        }
+        else
+        {
+            if (!room(input, 4, requestLength)) return TransferPacketCheck::Invalid;
+            input += 4;
+        }
+    }
+    return overflow ? TransferPacketCheck::ResponseOverflow : TransferPacketCheck::Ok;
+}
+
 Result invalid()
 {
     return {Status::InvalidPacket, 0};
@@ -163,7 +205,9 @@ Result Core::processTransfer(ISwd& swd,
                              uint8_t* response,
                              size_t responseCapacity)
 {
-    if (requestLength < 3 || responseCapacity < 3) return invalid();
+    const TransferPacketCheck check =
+        checkTransferPacket(request, requestLength, responseCapacity);
+    if (check == TransferPacketCheck::Invalid) return invalid();
 
     size_t input = 3;
     size_t output = 3;
@@ -176,6 +220,14 @@ Result Core::processTransfer(ISwd& swd,
     response[0] = IdTransfer;
     response[1] = 0;
     response[2] = 0;
+
+    // Reject the whole packet before touching the target so a host retry cannot
+    // duplicate writes that preceded an oversized read response.
+    if (check == TransferPacketCheck::ResponseOverflow)
+    {
+        response[2] = ISwd::AckError;
+        return {Status::Ok, 3};
+    }
 
     for (uint8_t index = 0; index < requestedCount; ++index)
     {

@@ -146,6 +146,26 @@ int main()
     }
 
     {
+        // Fifteen reads fit in a 64-byte response; sixteen are rejected before
+        // any target access occurs.
+        uint8_t rx[3 + 16] = {0x05, 0, 15};
+        memset(rx + 3, 0x02, 16);
+        swd.transferCount = 0;
+        auto result = dap.processPacket(swd, rx, sizeof(rx) - 1, tx);
+        assert(result.responseLength == 63);
+        assert(tx[1] == 15 && tx[2] == ISwd::AckOk);
+        assert(swd.transferCount == 15);
+
+        rx[2] = 16;
+        swd.transferCount = 0;
+        result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.status == CmsisDap::Status::Ok);
+        assert(result.responseLength == 3);
+        assert(tx[1] == 0 && tx[2] == ISwd::AckError);
+        assert(swd.transferCount == 0);
+    }
+
+    {
         // WAIT is retried up to DAP_TransferConfigure.retry_count.
         const uint8_t rx[] = {0x05, 0, 1, 0x02};
         swd.transferCount = 0;
