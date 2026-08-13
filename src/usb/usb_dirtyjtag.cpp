@@ -2,6 +2,7 @@
 #include "dirtyjtag_descriptors.hpp"
 #include "usb_serial.hpp"
 #include "packet_order.hpp"
+#include "time.hpp"
 
 extern "C" {
 #include <string.h>
@@ -24,6 +25,11 @@ extern "C" {
 
 namespace Desc = DirtyJtagUsbDescriptors;
 
+namespace
+{
+constexpr uint32_t kAbandonedReplyTimeoutMs = 5000;
+}
+
 UsbDirtyJtag* UsbDirtyJtag::self_ = nullptr;
 
 void UsbDirtyJtag::endpointInit()
@@ -37,30 +43,52 @@ void UsbDirtyJtag::endpointInit()
     USBFSD->UEP3_DMA = (uint32_t)ep3In_;
 
     USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
-    USBFSD->UEP1_CTRL_H = USBFS_UEP_R_RES_ACK;
-    USBFSD->UEP2_CTRL_H = USBFS_UEP_T_RES_NAK;
-    USBFSD->UEP2_TX_LEN = 0;
-    USBFSD->UEP4_CTRL_H = USBFS_UEP_R_RES_ACK;
-    USBFSD->UEP3_CTRL_H = USBFS_UEP_T_RES_NAK;
-    USBFSD->UEP3_TX_LEN = 0;
-
-    pendingLength_ = 0;
-    packetPending_ = false;
-    packetTaken_ = false;
-    txBusy_ = false;
-    dapPendingLength_ = 0;
-    dapPacketPending_ = false;
-    dapPacketTaken_ = false;
-    dapTxBusy_ = false;
+    resetDirtyJtagEndpoints(true, true);
+    resetCmsisDapEndpoints(true, true);
     arrivalCounter_ = 0;
     dirtyJtagArrival_ = 0;
     cmsisDapArrival_ = 0;
 }
 
+void UsbDirtyJtag::resetDirtyJtagEndpoints(bool resetOutToggle, bool resetInToggle)
+{
+    uint16_t outToggle = USBFSD->UEP1_CTRL_H & USBFS_UEP_R_TOG;
+    uint16_t inToggle = USBFSD->UEP2_CTRL_H & USBFS_UEP_T_TOG;
+    if (resetOutToggle) outToggle = 0;
+    if (resetInToggle) inToggle = 0;
+
+    USBFSD->UEP2_TX_LEN = 0;
+    USBFSD->UEP1_CTRL_H = outToggle | USBFS_UEP_R_RES_ACK;
+    USBFSD->UEP2_CTRL_H = inToggle | USBFS_UEP_T_RES_NAK;
+    pendingLength_ = 0;
+    packetPending_ = false;
+    packetTaken_ = false;
+    txBusy_ = false;
+    txStartedMs_ = 0;
+}
+
+void UsbDirtyJtag::resetCmsisDapEndpoints(bool resetOutToggle, bool resetInToggle)
+{
+    uint16_t outToggle = USBFSD->UEP4_CTRL_H & USBFS_UEP_R_TOG;
+    uint16_t inToggle = USBFSD->UEP3_CTRL_H & USBFS_UEP_T_TOG;
+    if (resetOutToggle) outToggle = 0;
+    if (resetInToggle) inToggle = 0;
+
+    USBFSD->UEP3_TX_LEN = 0;
+    USBFSD->UEP4_CTRL_H = outToggle | USBFS_UEP_R_RES_ACK;
+    USBFSD->UEP3_CTRL_H = inToggle | USBFS_UEP_T_RES_NAK;
+    dapPendingLength_ = 0;
+    dapPacketPending_ = false;
+    dapPacketTaken_ = false;
+    dapTxBusy_ = false;
+    dapTxStartedMs_ = 0;
+}
+
 void UsbDirtyJtag::init()
 {
     self_ = this;
-    sessionResetPending_ = false;
+    dirtyJtagResetPending_ = false;
+    cmsisDapResetPending_ = false;
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOC, ENABLE);
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_USBFS, ENABLE);
@@ -142,35 +170,22 @@ bool UsbDirtyJtag::takeNextPacket(uint8_t* destination, size_t& length, bool& cm
     return available;
 }
 
-bool UsbDirtyJtag::takeSessionReset()
+bool UsbDirtyJtag::takeSessionReset(bool& dirtyJtag, bool& cmsisDap)
 {
-    bool pending;
     NVIC_DisableIRQ(USBFS_IRQn);
-    pending = sessionResetPending_;
-    sessionResetPending_ = false;
-    if (pending)
-    {
-        packetPending_ = false;
-        packetTaken_ = false;
-        pendingLength_ = 0;
-        dapPacketPending_ = false;
-        dapPacketTaken_ = false;
-        dapPendingLength_ = 0;
-
-        // Abort unacknowledged replies without changing endpoint data toggles.
-        USBFSD->UEP2_TX_LEN = 0;
-        USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                              USBFS_UEP_T_RES_NAK;
-        txBusy_ = false;
-        USBFSD->UEP3_TX_LEN = 0;
-        USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                              USBFS_UEP_T_RES_NAK;
-        dapTxBusy_ = false;
-        armOut();
-        armCmsisDapOut();
-    }
+    const uint32_t now = Time::millis();
+    dirtyJtag = dirtyJtagResetPending_ ||
+        (txBusy_ &&
+         (uint32_t)(now - txStartedMs_) >= kAbandonedReplyTimeoutMs);
+    cmsisDap = cmsisDapResetPending_ ||
+        (dapTxBusy_ &&
+         (uint32_t)(now - dapTxStartedMs_) >= kAbandonedReplyTimeoutMs);
+    dirtyJtagResetPending_ = false;
+    cmsisDapResetPending_ = false;
+    if (dirtyJtag) resetDirtyJtagEndpoints(false, false);
+    if (cmsisDap) resetCmsisDapEndpoints(false, false);
     NVIC_EnableIRQ(USBFS_IRQn);
-    return pending;
+    return dirtyJtag || cmsisDap;
 }
 
 bool UsbDirtyJtag::finish(const uint8_t* response, size_t length)
@@ -192,6 +207,7 @@ bool UsbDirtyJtag::finish(const uint8_t* response, size_t length)
             USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                                   USBFS_UEP_T_RES_ACK;
             txBusy_ = true;
+            txStartedMs_ = Time::millis();
         }
         else
         {
@@ -222,6 +238,7 @@ bool UsbDirtyJtag::finishCmsisDap(const uint8_t* response, size_t length)
             USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                                   USBFS_UEP_T_RES_ACK;
             dapTxBusy_ = true;
+            dapTxStartedMs_ = Time::millis();
         }
         else
         {
@@ -302,9 +319,17 @@ void UsbDirtyJtag::handleSetup()
                 break;
 
             case USB_SET_CONFIGURATION:
+                if (setupValue_ > 1)
+                {
+                    error = true;
+                    break;
+                }
                 deviceConfiguration_ = (uint8_t)setupValue_;
                 configured_ = deviceConfiguration_ != 0;
-                if (!configured_) sessionResetPending_ = true;
+                resetDirtyJtagEndpoints(true, true);
+                resetCmsisDapEndpoints(true, true);
+                dirtyJtagResetPending_ = true;
+                cmsisDapResetPending_ = true;
                 break;
 
             case USB_GET_INTERFACE:
@@ -313,6 +338,22 @@ void UsbDirtyJtag::handleSetup()
                 break;
 
             case USB_SET_INTERFACE:
+                if (setupValue_ != 0 || !configured_)
+                {
+                    error = true;
+                    break;
+                }
+                if (setupIndex_ == 0)
+                {
+                    resetDirtyJtagEndpoints(true, true);
+                    dirtyJtagResetPending_ = true;
+                }
+                else if (setupIndex_ == 1)
+                {
+                    resetCmsisDapEndpoints(true, true);
+                    cmsisDapResetPending_ = true;
+                }
+                else error = true;
                 break;
 
             case USB_GET_STATUS:
@@ -323,17 +364,25 @@ void UsbDirtyJtag::handleSetup()
 
             case USB_CLEAR_FEATURE:
                 if ((setupRequestType_ & USB_REQ_RECIP_MASK) == USB_REQ_RECIP_ENDP &&
-                    (uint8_t)setupValue_ == USB_REQ_FEAT_ENDP_HALT)
+                    setupValue_ == USB_REQ_FEAT_ENDP_HALT)
                 {
-                    switch ((uint8_t)setupIndex_)
+                    switch (setupIndex_)
                     {
-                        case (UEP_OUT | UEP1): armOut(); break;
-                        case (UEP_IN | UEP2):
-                            USBFSD->UEP2_CTRL_H = USBFS_UEP_T_RES_NAK;
+                        case (UEP_OUT | UEP1):
+                            resetDirtyJtagEndpoints(true, false);
+                            dirtyJtagResetPending_ = true;
                             break;
-                        case (UEP_OUT | UEP4): armCmsisDapOut(); break;
+                        case (UEP_IN | UEP2):
+                            resetDirtyJtagEndpoints(false, true);
+                            dirtyJtagResetPending_ = true;
+                            break;
+                        case (UEP_OUT | UEP4):
+                            resetCmsisDapEndpoints(true, false);
+                            cmsisDapResetPending_ = true;
+                            break;
                         case (UEP_IN | UEP3):
-                            USBFSD->UEP3_CTRL_H = USBFS_UEP_T_RES_NAK;
+                            resetCmsisDapEndpoints(false, true);
+                            cmsisDapResetPending_ = true;
                             break;
                         default: error = true; break;
                     }
@@ -402,7 +451,8 @@ void UsbDirtyJtag::busReset()
     sleepStatus_ = 0;
     USBFSD->DEV_ADDR = 0;
     endpointInit();
-    sessionResetPending_ = true;
+    dirtyJtagResetPending_ = true;
+    cmsisDapResetPending_ = true;
 }
 
 void UsbDirtyJtag::onIrq()
@@ -425,6 +475,7 @@ void UsbDirtyJtag::onIrq()
                     USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                                           USBFS_UEP_T_RES_NAK;
                     txBusy_ = false;
+                    txStartedMs_ = 0;
                     armOut();
                 }
                 else if ((status & USBFS_UIS_ENDP_MASK) == UEP3)
@@ -433,6 +484,7 @@ void UsbDirtyJtag::onIrq()
                     USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                                           USBFS_UEP_T_RES_NAK;
                     dapTxBusy_ = false;
+                    dapTxStartedMs_ = 0;
                     armCmsisDapOut();
                 }
                 break;
@@ -482,7 +534,8 @@ void UsbDirtyJtag::onIrq()
         if (USBFSD->MIS_ST & USBFS_UMS_SUSPEND)
         {
             sleepStatus_ |= 0x02;
-            sessionResetPending_ = true;
+            dirtyJtagResetPending_ = true;
+            cmsisDapResetPending_ = true;
         }
         else                                    sleepStatus_ &= (uint8_t)~0x02;
     }

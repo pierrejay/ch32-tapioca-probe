@@ -22,8 +22,8 @@ public:
     // selected endpoint remains NAKed until its matching finish method.
     bool takeNextPacket(uint8_t* destination, size_t& length, bool& cmsisDap);
 
-    // USB reset or suspend releases any debug transport ownership in main.
-    bool takeSessionReset();
+    // Reports which transport session must release the shared target wire.
+    bool takeSessionReset(bool& dirtyJtag, bool& cmsisDap);
 
     // Completes processing. A non-empty response is sent on EP2 IN; otherwise
     // EP1 OUT is immediately rearmed for the next command packet.
@@ -36,6 +36,8 @@ public:
 
 private:
     void endpointInit();
+    void resetDirtyJtagEndpoints(bool resetOutToggle, bool resetInToggle);
+    void resetCmsisDapEndpoints(bool resetOutToggle, bool resetInToggle);
     void handleSetup();
     void handleEp0In();
     void busReset();
@@ -60,14 +62,17 @@ private:
     volatile bool packetPending_ = false;
     volatile bool packetTaken_ = false;
     volatile bool txBusy_ = false;
+    volatile uint32_t txStartedMs_ = 0;
     volatile uint8_t dapPendingLength_ = 0;
     volatile bool dapPacketPending_ = false;
     volatile bool dapPacketTaken_ = false;
     volatile bool dapTxBusy_ = false;
+    volatile uint32_t dapTxStartedMs_ = 0;
     volatile uint32_t arrivalCounter_ = 0;
     volatile uint32_t dirtyJtagArrival_ = 0;
     volatile uint32_t cmsisDapArrival_ = 0;
-    volatile bool sessionResetPending_ = false;
+    volatile bool dirtyJtagResetPending_ = false;
+    volatile bool cmsisDapResetPending_ = false;
     volatile bool configured_ = false;
     uint8_t deviceAddress_ = 0;
     uint8_t deviceConfiguration_ = 0;

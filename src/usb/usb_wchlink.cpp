@@ -1,6 +1,7 @@
 #include "usb_wchlink.hpp"
 #include "wchlink_descriptors.hpp"
 #include "usb_serial.hpp"
+#include "time.hpp"
 
 extern "C" {
 #include <string.h>
@@ -20,6 +21,11 @@ extern "C" {
 
 namespace Desc = WchLinkUsbDescriptors;
 
+namespace
+{
+constexpr uint32_t kAbandonedReplyTimeoutMs = 5000;
+}
+
 UsbWchLink* UsbWchLink::self_ = nullptr;
 
 void UsbWchLink::endpointInit()
@@ -32,14 +38,26 @@ void UsbWchLink::endpointInit()
     USBFSD->UEP1_DMA = (uint32_t)ep1_;
 
     USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
-    // Ready to receive a command; NAK IN until a reply is queued.
-    USBFSD->UEP1_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
-    USBFSD->UEP1_TX_LEN = 0;
+    resetEp1(true, true);
+}
 
+void UsbWchLink::resetEp1(bool resetOutToggle, bool resetInToggle)
+{
+    uint16_t toggles = USBFSD->UEP1_CTRL_H &
+                       (USBFS_UEP_R_TOG | USBFS_UEP_T_TOG);
+    if (resetOutToggle) toggles &= (uint16_t)~USBFS_UEP_R_TOG;
+    if (resetInToggle) toggles &= (uint16_t)~USBFS_UEP_T_TOG;
+
+    // Drop both halves of the paired command/reply transaction. Reconfiguration
+    // resets both directions to DATA0; CLEAR_FEATURE resets only its endpoint;
+    // timeout/suspend recovery preserves both bus data toggles.
+    USBFSD->UEP1_TX_LEN = 0;
+    USBFSD->UEP1_CTRL_H = toggles | USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
     pendingLength_ = 0;
     packetPending_ = false;
     packetTaken_ = false;
     txBusy_ = false;
+    txStartedMs_ = 0;
 }
 
 void UsbWchLink::init()
@@ -111,20 +129,13 @@ bool UsbWchLink::takeSessionReset()
 {
     bool pending;
     NVIC_DisableIRQ(USBFS_IRQn);
-    pending = sessionResetPending_;
+    const bool replyTimedOut = txBusy_ &&
+        (uint32_t)(Time::millis() - txStartedMs_) >= kAbandonedReplyTimeoutMs;
+    pending = sessionResetPending_ || replyTimedOut;
     sessionResetPending_ = false;
     if (pending)
     {
-        packetPending_ = false;
-        packetTaken_ = false;
-        pendingLength_ = 0;
-
-        // Abort an unacknowledged reply without changing the endpoint data toggles.
-        USBFSD->UEP1_TX_LEN = 0;
-        USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                              USBFS_UEP_T_RES_NAK;
-        txBusy_ = false;
-        armOut();
+        resetEp1(false, false);
     }
     NVIC_EnableIRQ(USBFS_IRQn);
     return pending;
@@ -150,6 +161,7 @@ bool UsbWchLink::finish(const uint8_t* response, size_t length)
         USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                               USBFS_UEP_T_RES_ACK;
         txBusy_ = true;
+        txStartedMs_ = Time::millis();
         accepted = true;
     }
     NVIC_EnableIRQ(USBFS_IRQn);
@@ -224,9 +236,15 @@ void UsbWchLink::handleSetup()
                 break;
 
             case USB_SET_CONFIGURATION:
+                if (setupValue_ > 1)
+                {
+                    error = true;
+                    break;
+                }
                 deviceConfiguration_ = (uint8_t)setupValue_;
                 configured_ = deviceConfiguration_ != 0;
-                if (!configured_) sessionResetPending_ = true;
+                resetEp1(true, true);
+                sessionResetPending_ = true;
                 break;
 
             case USB_GET_INTERFACE:
@@ -235,6 +253,13 @@ void UsbWchLink::handleSetup()
                 break;
 
             case USB_SET_INTERFACE:
+                if (setupIndex_ != 0 || setupValue_ != 0 || !configured_)
+                {
+                    error = true;
+                    break;
+                }
+                resetEp1(true, true);
+                sessionResetPending_ = true;
                 break;
 
             case USB_GET_STATUS:
@@ -245,14 +270,17 @@ void UsbWchLink::handleSetup()
 
             case USB_CLEAR_FEATURE:
                 if ((setupRequestType_ & USB_REQ_RECIP_MASK) == USB_REQ_RECIP_ENDP &&
-                    (uint8_t)setupValue_ == USB_REQ_FEAT_ENDP_HALT)
+                    setupValue_ == USB_REQ_FEAT_ENDP_HALT)
                 {
-                    switch ((uint8_t)setupIndex_)
+                    switch (setupIndex_)
                     {
-                        case (UEP_OUT | UEP1): armOut(); break;
+                        case (UEP_OUT | UEP1):
+                            resetEp1(true, false);
+                            sessionResetPending_ = true;
+                            break;
                         case (UEP_IN | UEP1):
-                            USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                                                  USBFS_UEP_T_RES_NAK;
+                            resetEp1(false, true);
+                            sessionResetPending_ = true;
                             break;
                         default: error = true; break;
                     }
@@ -345,6 +373,7 @@ void UsbWchLink::onIrq()
                     USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                                           USBFS_UEP_T_RES_NAK;
                     txBusy_ = false;
+                    txStartedMs_ = 0;
                     armOut();
                 }
                 break;

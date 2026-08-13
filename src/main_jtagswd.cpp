@@ -55,11 +55,20 @@ int main(void)
     {
         ActivityLed::tick(); // before the idle continue, so the LED updates every loop
 
-        if (g_usb.takeSessionReset())
+        bool resetJtag = false;
+        bool resetDap = false;
+        if (g_usb.takeSessionReset(resetJtag, resetDap))
         {
-            g_jtag.disconnect();
-            g_dap.resetConnection(g_swd);
-            wireMode = WireMode::None;
+            if (resetJtag)
+            {
+                g_jtag.disconnect();
+                wireMode = releaseWire(wireMode, WireMode::Jtag);
+            }
+            if (resetDap)
+            {
+                g_dap.resetConnection(g_swd);
+                wireMode = releaseWire(wireMode, WireMode::Swd);
+            }
         }
 
         size_t rxLength = 0;

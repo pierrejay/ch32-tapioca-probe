@@ -32,6 +32,7 @@ public:
 
 private:
     void endpointInit();
+    void resetEp1(bool resetOutToggle, bool resetInToggle);
     void handleSetup();
     void handleEp0In();
     void busReset();
@@ -55,6 +56,7 @@ private:
     volatile bool packetPending_ = false;
     volatile bool packetTaken_ = false;
     volatile bool txBusy_ = false;
+    volatile uint32_t txStartedMs_ = 0;
     volatile bool sessionResetPending_ = false;
     volatile bool configured_ = false;
     uint8_t deviceAddress_ = 0;
