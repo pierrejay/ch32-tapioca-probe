@@ -26,7 +26,6 @@ private:
     bool runFrame(uint8_t command);
 
     bool engineLoaded_ = false;
-    // Deferred inter-frame guard: end-of-frame stamps this deadline; the next frame
-    // waits only for whatever margin the USB turnaround did not already consume.
-    uint32_t guardDeadlineUs_ = 0;
+    // The next frame waits only for the margin not consumed since this timestamp.
+    uint32_t lastFrameEndUs_ = 0;
 };

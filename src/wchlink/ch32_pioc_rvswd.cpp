@@ -18,8 +18,8 @@ constexpr uint8_t CtrlRead = 0x01;
 constexpr uint32_t EngineTimeoutIterations = 32000000;
 
 // Inter-frame guard, in microseconds: minimum spacing between the end of one RVSWD
-// frame and the START of the next, on the wire. Applied as a DEFERRED deadline (see
-// runFrame) so the wait overlaps the USB turnaround instead of sitting on the reply
+// frame and the START of the next, on the wire. Measured from the previous frame so
+// the wait overlaps the USB turnaround instead of sitting on the reply
 // critical path - we keep the full 8 us wire margin at ~zero latency cost.
 // Overridable at build time (-D RVSWD_GUARD_US=n).
 #ifndef RVSWD_GUARD_US
@@ -99,12 +99,13 @@ void Ch32PiocRvswd::loadEngine()
 
 bool Ch32PiocRvswd::runFrame(uint8_t command)
 {
-    // Deferred inter-frame guard: honour the spacing recorded at the end of the
-    // previous frame, but wait only for the margin the USB turnaround has not
-    // already covered. Back-to-back ops (e.g. connect()) still get the full guard;
-    // USB-paced ops (the flash loop) see the deadline already elapsed -> no wait.
+    // Honour the spacing from the previous frame while allowing USB turnaround to
+    // consume it. Elapsed-time arithmetic also treats long-idle timestamps safely.
 #if RVSWD_GUARD_US > 0
-    while ((int32_t)(Time::micros() - guardDeadlineUs_) < 0) { /* spin remainder */ }
+    while ((uint32_t)(Time::micros() - lastFrameEndUs_) < RVSWD_GUARD_US)
+    {
+        /* spin remainder */
+    }
 #endif
 
     R8_DATA_REG1 = 0; // STATUS = busy
@@ -117,9 +118,9 @@ bool Ch32PiocRvswd::runFrame(uint8_t command)
     while (R8_DATA_REG1 == 0 && timeout != 0) --timeout;
     if (timeout != 0)
     {
-        // Stamp the next frame's earliest START; reply on USB without blocking.
+        // Record the frame end; reply on USB without blocking.
 #if RVSWD_GUARD_US > 0
-        guardDeadlineUs_ = Time::micros() + RVSWD_GUARD_US;
+        lastFrameEndUs_ = Time::micros();
 #endif
         return true;
     }
