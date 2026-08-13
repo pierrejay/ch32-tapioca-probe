@@ -27,7 +27,7 @@ namespace Desc = DirtyJtagUsbDescriptors;
 
 namespace
 {
-constexpr uint32_t kAbandonedReplyTimeoutMs = 5000;
+constexpr uint32_t kAbandonedReplyTimeoutMs = 1000;
 }
 
 UsbDirtyJtag* UsbDirtyJtag::self_ = nullptr;
