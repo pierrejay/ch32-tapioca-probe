@@ -28,9 +28,7 @@ static UsbDirtyJtag g_usb;
 
 int main(void)
 {
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-    SystemCoreClockUpdate();
-    Delay_Init();
+    SystemInit();
     Time::init();
 
     g_swd.init();

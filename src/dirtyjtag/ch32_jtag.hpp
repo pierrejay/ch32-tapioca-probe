@@ -23,8 +23,10 @@ public:
 private:
     void halfPeriodDelay() const;
     bool pulseClock();
+    void selectJtag();
     static void configureOutput(GPIO_TypeDef* port, uint32_t pin);
-    static void configureInput(GPIO_TypeDef* port, uint32_t pin, GPIOMode_TypeDef mode);
+    static void configureInput(GPIO_TypeDef* port, uint32_t pin,
+                               GPIO_CFGLR_PIN_MODE_Typedef mode);
     static void write(GPIO_TypeDef* port, uint32_t pin, bool high);
     static void setResetLine(GPIO_TypeDef* port, uint32_t pin, bool high);
 

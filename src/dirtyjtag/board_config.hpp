@@ -1,7 +1,7 @@
 #pragma once
 
 // Default pinout for the CH32X035F8U6/QFN20 development target.
-// Override these definitions through PlatformIO build_flags for a custom PCB.
+// Override these definitions through EXTRA_CPPFLAGS for a custom PCB.
 
 // TMS/TCK live on the PIOC/SDI pins PC19/PC18 so they coincide with the SWD
 // SWDIO/SWCLK pins: a target wired for SWD (SWDIO->PC19, SWCLK->PC18) also works

@@ -2,7 +2,6 @@
 #include "pioc_swd_protocol.hpp"
 
 extern "C" {
-#include "PIOC_SFR.h"
 #include <string.h>
 }
 
@@ -43,30 +42,30 @@ void write32(uint8_t* output, uint32_t value)
 }
 }
 
-void Ch32PiocSwd::configureOutput(GPIO_TypeDef* port, uint32_t pin, GPIOMode_TypeDef mode)
+void Ch32PiocSwd::configureOutput(GPIO_TypeDef* port, uint32_t pins,
+                                  GPIO_CFGLR_PIN_MODE_Typedef mode)
 {
-    GPIO_InitTypeDef gpio = {};
-    gpio.GPIO_Pin = pin;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio.GPIO_Mode = mode;
-    GPIO_Init(port, &gpio);
+    for (uint32_t bit = 0; bit < 24; ++bit)
+    {
+        if ((pins & (1u << bit)) == 0) continue;
+        volatile uint32_t* cfg = bit < 8 ? &port->CFGLR :
+                                 bit < 16 ? &port->CFGHR : &port->CFGXR;
+        const uint32_t shift = (bit & 7u) * 4u;
+        *cfg = (*cfg & ~(0xfu << shift)) | (static_cast<uint32_t>(mode) << shift);
+    }
 }
 
 void Ch32PiocSwd::configureInput(GPIO_TypeDef* port, uint32_t pin)
 {
-    GPIO_InitTypeDef gpio = {};
-    gpio.GPIO_Pin = pin;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_Init(port, &gpio);
+    configureOutput(port, pin, GPIO_CFGLR_IN_FLOAT);
 }
 
 void Ch32PiocSwd::init()
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC |
-                           RCC_APB2Periph_AFIO, ENABLE);
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_IO2W, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC |
+                      RCC_APB2Periph_AFIO;
+    RCC->AHBPCENR |= RCC_AHBPeriph_IO2W;
+    AFIO->PCFR1 = (AFIO->PCFR1 & ~AFIO_PCFR1_SWJ_CFG) | AFIO_PCFR1_SWJ_CFG_DISABLE;
 
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
@@ -82,7 +81,7 @@ void Ch32PiocSwd::loadEngine()
     static_assert(sizeof(program) <= 4096, "PIOC program exceeds reserved SRAM");
 
     R8_SYS_CFG = 0;
-    configureOutput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19, GPIO_Mode_AF_PP);
+    configureOutput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19, GPIO_CFGLR_OUT_10Mhz_AF_PP);
     memcpy(reinterpret_cast<void*>(PIOC_SRAM_BASE), program, sizeof(program));
 
     R8_DATA_REG0 = 0;
@@ -267,25 +266,25 @@ void Ch32PiocSwd::setReset(bool high)
     if (high) configureInput(GPIOB, GPIO_Pin_0);
     else
     {
-        GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+        GPIOB->BCR = GPIO_Pin_0;
         configureOutput(GPIOB, GPIO_Pin_0);
-        GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+        GPIOB->BCR = GPIO_Pin_0;
     }
 }
 
 bool Ch32PiocSwd::getClock() const
 {
-    return GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_18) != Bit_RESET;
+    return (GPIOC->INDR & GPIO_Pin_18) != 0;
 }
 
 bool Ch32PiocSwd::getData() const
 {
-    return GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_19) != Bit_RESET;
+    return (GPIOC->INDR & GPIO_Pin_19) != 0;
 }
 
 bool Ch32PiocSwd::getReset() const
 {
-    return GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) != Bit_RESET;
+    return (GPIOB->INDR & GPIO_Pin_0) != 0;
 }
 
 void Ch32PiocSwd::recordAck(uint8_t ack)

@@ -8,13 +8,13 @@ volatile uint32_t g_millis = 0;
 bool g_timeInitialized = false;
 }
 
-extern "C" void TIM2_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-extern "C" void TIM2_UP_IRQHandler(void)
+extern "C" void TIM2_IRQHandler(void) INTERRUPT_DECORATOR;
+extern "C" void TIM2_IRQHandler(void)
 {
-    if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+    if ((TIM2->INTFR & TIM_UIF) != 0)
     {
         ++g_millis;
-        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+        TIM2->INTFR = static_cast<uint16_t>(~TIM_UIF);
     }
 }
 
@@ -27,28 +27,16 @@ void init()
         return;
     }
 
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-
-    TIM_TimeBaseInitTypeDef timer = {0};
-    timer.TIM_Period = 1000 - 1;
-    timer.TIM_Prescaler = (uint16_t)(SystemCoreClock / 1000000u - 1u);
-    timer.TIM_ClockDivision = TIM_CKD_DIV1;
-    timer.TIM_CounterMode = TIM_CounterMode_Up;
-    timer.TIM_RepetitionCounter = 0;
-    TIM_TimeBaseInit(TIM2, &timer);
-
-    TIM_SetCounter(TIM2, 0);
-    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
-    NVIC_InitTypeDef nvic = {0};
-    nvic.NVIC_IRQChannel = TIM2_UP_IRQn;
-    nvic.NVIC_IRQChannelPreemptionPriority = 1;
-    nvic.NVIC_IRQChannelSubPriority = 1;
-    nvic.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&nvic);
-
-    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-    TIM_Cmd(TIM2, ENABLE);
+    RCC->APB1PCENR |= RCC_APB1Periph_TIM2;
+    TIM2->CTLR1 = 0;
+    TIM2->PSC = static_cast<uint16_t>(FUNCONF_SYSTEM_CORE_CLOCK / 1000000u - 1u);
+    TIM2->ATRLR = 999;
+    TIM2->CNT = 0;
+    TIM2->SWEVGR = TIM_UG;
+    TIM2->INTFR = static_cast<uint16_t>(~TIM_UIF);
+    TIM2->DMAINTENR = TIM_UIE;
+    NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2->CTLR1 = TIM_CEN;
 
     g_timeInitialized = true;
 }
@@ -64,11 +52,11 @@ uint32_t micros()
     // ms counter on both sides of the CNT read; if it ticked over, re-read CNT
     // against the new ms so the two halves are consistent.
     uint32_t m1 = g_millis;
-    uint32_t cnt = TIM_GetCounter(TIM2);
+    uint32_t cnt = TIM2->CNT;
     uint32_t m2 = g_millis;
     if (m1 != m2)
     {
-        cnt = TIM_GetCounter(TIM2);
+        cnt = TIM2->CNT;
         m1  = m2;
     }
     return m1 * 1000u + cnt;

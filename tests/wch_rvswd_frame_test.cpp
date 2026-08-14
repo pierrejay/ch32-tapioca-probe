@@ -3,8 +3,7 @@
 // real WCH-LinkE -> CH32V307 exchange (decoded with perigoso/sigrok-rvswd).
 //
 // Build:
-//   c++ -std=c++17 -Wall -Wextra -Isrc -Itests \
-//     tests/wch_rvswd_frame_test.cpp -o tests/wch_rvswd_frame_test
+//   c++ -std=c++17 -Wall -Wextra -Isrc -Itests tests/wch_rvswd_frame_test.cpp
 //   ./tests/wch_rvswd_frame_test
 #include <assert.h>
 #include <stdint.h>

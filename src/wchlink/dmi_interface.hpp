@@ -22,8 +22,6 @@ enum class DmiStatus : uint8_t
 class IDmi
 {
 public:
-    virtual ~IDmi() = default;
-
     // Establish a debug session with the target. Returns false if no target
     // responds. Must be bounded - a missing target never wedges the caller.
     virtual bool connect() = 0;
@@ -34,6 +32,9 @@ public:
 
     // Release the session and park target pins as floating inputs.
     virtual void disconnect() = 0;
+
+protected:
+    ~IDmi() = default;
 };
 
 } // namespace WchLink

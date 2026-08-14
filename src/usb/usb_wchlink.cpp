@@ -12,11 +12,6 @@ extern "C" {
 #define UEP0    0x00
 #define UEP1    0x01
 
-#define USB_IOEN     0x00000080
-#define USB_PHY_V33  0x00000040
-#define UDP_PUE_MASK 0x0000000C
-#define UDP_PUE_10K  0x00000008
-#define UDP_PUE_1K5  0x0000000C
 #define UDM_PUE_MASK 0x00000003
 
 namespace Desc = WchLinkUsbDescriptors;
@@ -24,6 +19,46 @@ namespace Desc = WchLinkUsbDescriptors;
 namespace
 {
 constexpr uint32_t kAbandonedReplyTimeoutMs = 1000;
+
+struct __attribute__((packed)) UsbSetupRequest
+{
+    uint8_t bRequestType;
+    uint8_t bRequest;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+};
+
+constexpr uint8_t USB_GET_STATUS = 0x00;
+constexpr uint8_t USB_CLEAR_FEATURE = 0x01;
+constexpr uint8_t USB_SET_ADDRESS = 0x05;
+constexpr uint8_t USB_GET_DESCRIPTOR = 0x06;
+constexpr uint8_t USB_GET_CONFIGURATION = 0x08;
+constexpr uint8_t USB_SET_CONFIGURATION = 0x09;
+constexpr uint8_t USB_GET_INTERFACE = 0x0a;
+constexpr uint8_t USB_SET_INTERFACE = 0x0b;
+constexpr uint8_t USB_REQ_TYP_MASK = 0x60;
+constexpr uint8_t USB_REQ_TYP_STANDARD = 0x00;
+constexpr uint8_t USB_REQ_RECIP_MASK = 0x1f;
+constexpr uint8_t USB_REQ_RECIP_ENDP = 0x02;
+constexpr uint8_t USB_REQ_FEAT_ENDP_HALT = 0x00;
+constexpr uint8_t USB_DESCR_TYP_DEVICE = 0x01;
+constexpr uint8_t USB_DESCR_TYP_CONFIG = 0x02;
+constexpr uint8_t USB_DESCR_TYP_STRING = 0x03;
+
+constexpr uint8_t USBFS_UEP1_RX_EN = RB_UEP1_RX_EN;
+constexpr uint8_t USBFS_UEP1_TX_EN = RB_UEP1_TX_EN;
+constexpr uint8_t USBFS_UD_PD_DIS = RB_UD_PD_DIS;
+constexpr uint8_t USBFS_UD_PORT_EN = RB_UD_PORT_EN;
+constexpr uint8_t USBFS_UIF_TRANSFER = RB_UIF_TRANSFER;
+constexpr uint8_t USBFS_UIF_BUS_RST = RB_UIF_BUS_RST;
+constexpr uint8_t USBFS_UIF_SUSPEND = RB_UIF_SUSPEND;
+constexpr uint8_t USBFS_UIS_TOKEN_MASK = MASK_UIS_TOKEN;
+constexpr uint8_t USBFS_UIS_TOKEN_IN = UIS_TOKEN_IN;
+constexpr uint8_t USBFS_UIS_TOKEN_OUT = UIS_TOKEN_OUT;
+constexpr uint8_t USBFS_UIS_TOKEN_SETUP = UIS_TOKEN_SETUP;
+constexpr uint8_t USBFS_UIS_ENDP_MASK = MASK_UIS_ENDP;
+constexpr uint8_t USBFS_UIS_TOG_OK = RB_UIS_TOG_OK;
 }
 
 UsbWchLink* UsbWchLink::self_ = nullptr;
@@ -65,28 +100,16 @@ void UsbWchLink::init()
     self_ = this;
     sessionResetPending_ = false;
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOC, ENABLE);
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_USBFS, ENABLE);
+    RCC->APB2PCENR |= RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOC;
+    RCC->AHBPCENR |= RCC_AHBPeriph_USBFS;
 
-    GPIO_InitTypeDef gpio = {};
-    gpio.GPIO_Pin = GPIO_Pin_16;
-    gpio.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOC, &gpio);
-    gpio.GPIO_Pin = GPIO_Pin_17;
-    gpio.GPIO_Mode = GPIO_Mode_IPU;
-    GPIO_Init(GPIOC, &gpio);
+    GPIOC->BSXR = GPIO_Pin_17 >> 16u;
+    GPIOC->CFGXR = (GPIOC->CFGXR & ~0xffu) |
+                   (GPIO_CFGLR_IN_FLOAT << 0) |
+                   (GPIO_CFGLR_IN_PUPD << 4);
 
-    if (PWR_VDD_SupplyVoltage() == PWR_VDD_5V)
-    {
-        AFIO->CTLR = (AFIO->CTLR & ~(UDP_PUE_MASK | UDM_PUE_MASK | USB_PHY_V33)) |
-                     UDP_PUE_10K | USB_IOEN;
-    }
-    else
-    {
-        AFIO->CTLR = (AFIO->CTLR & ~(UDP_PUE_MASK | UDM_PUE_MASK)) |
-                     USB_PHY_V33 | UDP_PUE_1K5 | USB_IOEN;
-    }
+    AFIO->CTLR = (AFIO->CTLR & ~(UDP_PUE_MASK | UDM_PUE_MASK)) |
+                 USB_PHY_V33 | UDP_PUE_1K5 | USB_IOEN;
 
     USBFSD->BASE_CTRL = 0;
     endpointInit();
@@ -96,12 +119,7 @@ void UsbWchLink::init()
     USBFSD->UDEV_CTRL = USBFS_UD_PD_DIS | USBFS_UD_PORT_EN;
     USBFSD->INT_EN = USBFS_UIE_SUSPEND | USBFS_UIE_BUS_RST | USBFS_UIE_TRANSFER;
 
-    NVIC_InitTypeDef nvic = {};
-    nvic.NVIC_IRQChannel = USBFS_IRQn;
-    nvic.NVIC_IRQChannelPreemptionPriority = 1;
-    nvic.NVIC_IRQChannelSubPriority = 3;
-    nvic.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&nvic);
+    NVIC_EnableIRQ(USBFS_IRQn);
 }
 
 void UsbWchLink::armOut()
@@ -170,7 +188,7 @@ bool UsbWchLink::finish(const uint8_t* response, size_t length)
 
 void UsbWchLink::handleSetup()
 {
-    PUSB_SETUP_REQ request = (PUSB_SETUP_REQ)ep0_;
+    const auto* request = reinterpret_cast<const UsbSetupRequest*>(ep0_);
     uint16_t length = 0;
     bool error = false;
 

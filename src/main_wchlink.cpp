@@ -26,9 +26,7 @@ static WchPort g_emitPort;
 
 int main(void)
 {
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-    SystemCoreClockUpdate();
-    Delay_Init();
+    SystemInit();
     Time::init(); // deferred RVSWD guard reads micros(); must run or runFrame spins
 
     g_emitPort.init();
@@ -47,9 +45,7 @@ static WchLink::Core g_core;
 
 int main(void)
 {
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-    SystemCoreClockUpdate();
-    Delay_Init();
+    SystemInit();
     Time::init(); // microsecond clock for the deferred RVSWD inter-frame guard
 
     g_usb.init();

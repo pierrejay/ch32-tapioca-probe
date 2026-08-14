@@ -13,8 +13,6 @@ public:
     static constexpr uint8_t AckFault = 0x04;
     static constexpr uint8_t AckError = 0x08;
 
-    virtual ~ISwd() = default;
-
     virtual void init() = 0;
     virtual void activate() = 0;
     virtual void disconnect() = 0;
@@ -38,4 +36,7 @@ public:
     // commands 0x80..0x9f for vendor use. Returning zero leaves the command
     // unsupported without coupling the portable CMSIS-DAP core to a backend.
     virtual size_t vendorCommand(const uint8_t*, size_t, uint8_t*, size_t) { return 0; }
+
+protected:
+    ~ISwd() = default;
 };

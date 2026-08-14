@@ -18,6 +18,14 @@ This project is MIT-licensed (see [`LICENSE`](LICENSE)) & builds on several upst
   [`src/swd/`](src/swd/) (built on Tapioca's PIOC timing), and the `tapioca_*.ASM` engines in [`pioc/`](pioc/).
 - Same author; carried over under this project's MIT license.
 
+### ch32fun (Charles Lohr and contributors)
+
+- Upstream: <https://github.com/cnlohr/ch32fun>.
+- Used as the CH32X035 runtime and device SDK through the pinned
+  [`sdk/ch32fun`](sdk/ch32fun) Git submodule; the host-side `minichlink` is built
+  from that same checkout.
+- License: MIT; the upstream license remains in the submodule.
+
 ## Protocols implemented from public specifications
 
 The following are **protocol specifications**, not vendor code — this repository contains original implementations, so their upstream licenses do not attach to it.
@@ -28,9 +36,10 @@ The following are **protocol specifications**, not vendor code — this reposito
   The code is written for this project; only the wire protocol is shared.
 
 ### WCH-Link direct-DMI, RVSWIO & RVSWD
-- Host tool / references: **ch32fun / minichlink** (Charles Lohr),
-  <https://github.com/cnlohr/ch32fun>. `minichlink` is the external host that drives
-  product 2; it is **not** redistributed here. The USB command framing
+
+- Host tool / references: **minichlink** (Charles Lohr),
+  <https://github.com/cnlohr/ch32fun>. The host executable built from the pinned
+  submodule drives product 2. The USB command framing
   ([`src/wchlink/`](src/wchlink/), [`docs/wch-link-usb-protocol.md`](docs/wch-link-usb-protocol.md)) was derived from its published
   `pgm-wch-linke.c` driver.
 - RVSWIO one-wire timing/recovery: reverse-engineered from `cnlohr/rv003usb`

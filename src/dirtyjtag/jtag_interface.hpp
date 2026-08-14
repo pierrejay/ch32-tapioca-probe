@@ -7,8 +7,6 @@
 class IJtag
 {
 public:
-    virtual ~IJtag() = default;
-
     virtual void setFrequencyKhz(uint16_t frequencyKhz) = 0;
     virtual void setTck(bool high) = 0;
     virtual void setTdi(bool high) = 0;
@@ -23,4 +21,7 @@ public:
 
     // Clock with fixed TMS/TDI levels and return the final sampled TDO level.
     virtual bool clock(uint8_t pulses, bool tms, bool tdi) = 0;
+
+protected:
+    ~IJtag() = default;
 };

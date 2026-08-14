@@ -1,0 +1,3 @@
+# WCH ROM USB ISP bootloader (current and legacy vendor IDs).
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="55e0", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="usb", ATTR{idVendor}=="4348", ATTR{idProduct}=="55e0", GROUP="plugdev", MODE="0660"

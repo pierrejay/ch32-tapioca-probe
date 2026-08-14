@@ -1,8 +1,9 @@
 # PIOC engines
 
 This directory holds the PIOC coprocessor programs (hand-written assembler),
-assembled to committed C headers by `assemble.py`. A PlatformIO pre-build hook
-(`scripts/verify_pioc.py`) re-assembles each one and rejects a stale header.
+assembled to committed C headers by `assemble.py`. Every firmware build
+re-assembles each one and rejects a stale header; `make verify-pioc` runs that
+check directly and `make regenerate-pioc` updates the headers intentionally.
 
 - `tapioca_swd.ASM` — deterministic ARM SWD physical engine (documented below).
 - `tapioca_rvswio.ASM` — WCH one-wire RVSWIO transport; see [`../docs/wch-rvswio-protocol.md`](../docs/wch-rvswio-protocol.md).
@@ -56,6 +57,6 @@ a valid DPIDR without reconnecting or power-cycling. WAIT retry behavior is
 covered by the host CMSIS-DAP tests. The optional WAIT/FAULT dummy data phase is
 implemented to the Arm cadence but is not enabled by the STM32 target profiles.
 
-PIOC program memory aliases the top 4 KiB of system SRAM. The PIOC PlatformIO
-environment therefore uses `ldscript/Link_CH32X035_pioc.ld`, which limits the
-main CPU to the lower 16 KiB and keeps its stack below `0x20004000`.
+PIOC program memory aliases the top 4 KiB of system SRAM. The firmware linker
+therefore uses `ldscript/Link_CH32X035_pioc.ld`, which limits the main CPU to the
+lower 16 KiB and keeps its stack below `0x20004000`.

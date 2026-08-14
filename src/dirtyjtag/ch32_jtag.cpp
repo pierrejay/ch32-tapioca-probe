@@ -3,26 +3,33 @@
 
 void Ch32Jtag::configureOutput(GPIO_TypeDef* port, uint32_t pin)
 {
-    GPIO_InitTypeDef gpio = {};
-    gpio.GPIO_Pin = pin;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(port, &gpio);
+    configureInput(port, pin, GPIO_CFGLR_OUT_10Mhz_PP);
 }
 
-void Ch32Jtag::configureInput(GPIO_TypeDef* port, uint32_t pin, GPIOMode_TypeDef mode)
+void Ch32Jtag::configureInput(GPIO_TypeDef* port, uint32_t pins,
+                              GPIO_CFGLR_PIN_MODE_Typedef mode)
 {
-    GPIO_InitTypeDef gpio = {};
-    gpio.GPIO_Pin = pin;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio.GPIO_Mode = mode;
-    GPIO_Init(port, &gpio);
+    for (uint32_t bit = 0; bit < 24; ++bit)
+    {
+        if ((pins & (1u << bit)) == 0) continue;
+        volatile uint32_t* cfg = bit < 8 ? &port->CFGLR :
+                                 bit < 16 ? &port->CFGHR : &port->CFGXR;
+        const uint32_t shift = (bit & 7u) * 4u;
+        *cfg = (*cfg & ~(0xfu << shift)) | (static_cast<uint32_t>(mode) << shift);
+    }
 }
 
 void Ch32Jtag::write(GPIO_TypeDef* port, uint32_t pin, bool high)
 {
-    if (high) GPIO_SetBits(port, pin);
-    else      GPIO_ResetBits(port, pin);
+    if (high)
+    {
+        port->BSHR = pin & 0xffffu;
+        port->BSXR = pin >> 16u;
+    }
+    else
+    {
+        port->BCR = pin;
+    }
 }
 
 void Ch32Jtag::setResetLine(GPIO_TypeDef* port, uint32_t pin, bool high)
@@ -32,23 +39,23 @@ void Ch32Jtag::setResetLine(GPIO_TypeDef* port, uint32_t pin, bool high)
     // target-side pull-up defines the high level.
     if (high)
     {
-        configureInput(port, pin, GPIO_Mode_IN_FLOATING);
+        configureInput(port, pin, GPIO_CFGLR_IN_FLOAT);
     }
     else
     {
-        GPIO_ResetBits(port, pin);
+        port->BCR = pin;
         configureOutput(port, pin);
-        GPIO_ResetBits(port, pin);
+        port->BCR = pin;
     }
 }
 
 void Ch32Jtag::init()
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
-                           RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
+                      RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO;
     // TCK/TMS are on PC18/PC19, the chip's SDI debug pins - free them for GPIO
     // use (idempotent; the SWD backend does the same for PIOC).
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+    AFIO->PCFR1 = (AFIO->PCFR1 & ~AFIO_PCFR1_SWJ_CFG) | AFIO_PCFR1_SWJ_CFG_DISABLE;
 
     setFrequencyKhz(DJTAG_DEFAULT_FREQUENCY_KHZ);
     disconnect();
@@ -56,30 +63,32 @@ void Ch32Jtag::init()
 
 void Ch32Jtag::activate()
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
-                           RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
+                      RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO;
     // TCK/TMS are on PC18/PC19, the chip's SDI debug pins - free them for GPIO
     // use (idempotent; the SWD backend does the same for PIOC).
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+    AFIO->PCFR1 = (AFIO->PCFR1 & ~AFIO_PCFR1_SWJ_CFG) | AFIO_PCFR1_SWJ_CFG_DISABLE;
 
     configureOutput(DJTAG_TCK_PORT, DJTAG_TCK_PIN);
     configureOutput(DJTAG_TDI_PORT, DJTAG_TDI_PIN);
     configureOutput(DJTAG_TMS_PORT, DJTAG_TMS_PIN);
-    configureInput(DJTAG_TDO_PORT, DJTAG_TDO_PIN, GPIO_Mode_IPD);
+    DJTAG_TDO_PORT->BCR = DJTAG_TDO_PIN;
+    configureInput(DJTAG_TDO_PORT, DJTAG_TDO_PIN, GPIO_CFGLR_IN_PUPD);
 
     setTck(false);
     setTdi(false);
     setTms(false);
     setSrst(true);
     setTrst(true);
+    selectJtag();
 }
 
 void Ch32Jtag::disconnect()
 {
-    configureInput(DJTAG_TCK_PORT, DJTAG_TCK_PIN, GPIO_Mode_IN_FLOATING);
-    configureInput(DJTAG_TDI_PORT, DJTAG_TDI_PIN, GPIO_Mode_IN_FLOATING);
-    configureInput(DJTAG_TMS_PORT, DJTAG_TMS_PIN, GPIO_Mode_IN_FLOATING);
-    configureInput(DJTAG_TDO_PORT, DJTAG_TDO_PIN, GPIO_Mode_IN_FLOATING);
+    configureInput(DJTAG_TCK_PORT, DJTAG_TCK_PIN, GPIO_CFGLR_IN_FLOAT);
+    configureInput(DJTAG_TDI_PORT, DJTAG_TDI_PIN, GPIO_CFGLR_IN_FLOAT);
+    configureInput(DJTAG_TMS_PORT, DJTAG_TMS_PIN, GPIO_CFGLR_IN_FLOAT);
+    configureInput(DJTAG_TDO_PORT, DJTAG_TDO_PIN, GPIO_CFGLR_IN_FLOAT);
     setSrst(true);
     setTrst(true);
 }
@@ -92,7 +101,7 @@ void Ch32Jtag::setFrequencyKhz(uint16_t frequencyKhz)
     // The loop and GPIO accesses dominate. This estimate intentionally errs on
     // the slow side; hardware validation can later replace it with a timer/SPI
     // implementation without changing the protocol core.
-    const uint32_t cyclesPerHalfPeriod = SystemCoreClock / (2u * frequencyKhz * 1000u);
+    const uint32_t cyclesPerHalfPeriod = FUNCONF_SYSTEM_CORE_CLOCK / (2u * frequencyKhz * 1000u);
     halfPeriodLoops_ = cyclesPerHalfPeriod / 4u;
     if (halfPeriodLoops_ == 0) halfPeriodLoops_ = 1;
 }
@@ -109,7 +118,7 @@ void Ch32Jtag::setTms(bool high) { write(DJTAG_TMS_PORT, DJTAG_TMS_PIN, high); }
 
 bool Ch32Jtag::getTdo() const
 {
-    return GPIO_ReadInputDataBit(DJTAG_TDO_PORT, DJTAG_TDO_PIN) != Bit_RESET;
+    return (DJTAG_TDO_PORT->INDR & DJTAG_TDO_PIN) != 0;
 }
 
 void Ch32Jtag::setTrst(bool high) { setResetLine(DJTAG_TRST_PORT, DJTAG_TRST_PIN, high); }
@@ -123,6 +132,20 @@ bool Ch32Jtag::pulseClock()
     const bool tdo = getTdo();
     setTck(false);
     return tdo;
+}
+
+void Ch32Jtag::selectJtag()
+{
+    // Arm SWJ-DP switch sequence: line reset, 0xE73C LSB-first, JTAG reset.
+    (void)clock(51, true, false);
+    constexpr uint16_t sequence = 0xe73c;
+    for (uint8_t bit = 0; bit < 16; ++bit)
+    {
+        setTms((sequence & (1u << bit)) != 0);
+        (void)pulseClock();
+    }
+    (void)clock(6, true, false);
+    setTms(false);
 }
 
 void Ch32Jtag::transfer(uint16_t bitCount, const uint8_t* in, uint8_t* out)

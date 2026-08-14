@@ -7,6 +7,8 @@ Two build-time USB debug-probe firmwares for CH32X035:
 
 It reuses the proven PIOC primitives from the sibling [**Tapioca**](https://github.com/pierrejay/ch32-tapioca) project.
 
+Based on the [ch32fun](https://github.com/cnlohr/ch32fun) SDK.
+
 ## Why?
 
 - The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB DFU bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**, and you could add a UART bridge, etc. just as easily.
@@ -21,18 +23,7 @@ It reuses the proven PIOC primitives from the sibling [**Tapioca**](https://gith
 | CH32 | RVSWIO (1-wire) | CH32V003 | minichlink |
 | CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink |
 
-## Build & upload
-
-Both products flash via the CH32X035 USB ISP bootloader by default (hold **BOOT** while plugging in):
-
-```sh
-pio run -e jtagswd -t upload   # product 1: JTAG + ARM SWD
-pio run -e wchlink -t upload   # product 2: WCH-Link (auto RVSWIO/RVSWD)
-```
-
-(PC18/PC19 are the CH32X035's own SDI debug pins, so the probe itself is flashed over USB ISP, not SWD.)
-
-Reference dev board: [WeAct Studio CH32X035 Core Board](https://github.com/WeActStudio/WeActStudio.CH32X035CoreBoard). Its on-board LED (PB12) is driven as an activity light, it flickers while the probe is talking to a target. Change the pin with `-D LED_PORT=GPIOA -D LED_PIN=5`, or turn it off with `-D LED_PIN=-1`.
+Reference dev board: [WeAct Studio CH32X035 Core Board](https://github.com/WeActStudio/WeActStudio.CH32X035CoreBoard). Its on-board LED (PB12) is driven as an activity light, it flickers while the probe is talking to a target. After `make clean`, change the pin with a ch32fun pin name such as `make EXTRA_CPPFLAGS=-DLED_PIN=PA5`, or turn it off with `make EXTRA_CPPFLAGS=-DLED_PIN=-1`.
 
 ## Structure & modes
 
@@ -98,12 +89,12 @@ One data line, plus a clock for the 2-wire parts:
 
 - On the same direct-DMI `minichlink` it flashes ~15 % faster than a genuine WCH-LinkE R0-1v3 and reads ~30 % faster (CH32V203, 32 KB payload). Insignificant in practice, and likely not true against newer probes using the vendor toolchain, but a good sign that the PIOC approach holds up. It has only been exercised with `minichlink` (not other WCH-Link host tools), and there is plenty of headroom left to optimise on the USB link and flashing process.
 
-- Some older `minichlink` builds don't drive direct-DMI. The one bundled with PlatformIO, `tool-minichlink` **v0.1.0** ([Community-PIO-CH32V](https://github.com/Community-PIO-CH32V/tool-minichlink)), used via `upload_protocol = minichlink` works out of the box.
+- Some older `minichlink` builds don't drive direct-DMI. `make minichlink` builds
+  the pinned version directly from the ch32fun submodule.
 
 ```sh
-# with the probe wired to the target, use PlatformIO's managed minichlink:
-~/.platformio/packages/tool-minichlink/minichlink -i   # detect the chip
-# or via upload_protocol = minichlink in the target's platformio.ini
+# with the probe wired to the target:
+make probe-wchlink   # build minichlink, then detect the chip
 ```
 
 ## USB identity: disclaimer
@@ -112,15 +103,63 @@ Both firmwares borrow **VID/PIDs assigned to other projects/vendors** (DirtyJTAG
 
 ⚠️ **These identities are not ours**: this is not an official DirtyJTAG, WCH, or Arm product. If you build on this, it is your responsibility to assign a real USB identity (e.g. a [pid.codes](https://pid.codes) allocation) before distributing anything, and to not pass the probe off as an existing vendor's product.
 
-## Layout
 
-`src/` is organised by module. The two build-time products share only `src/hal/` and `src/activity_led.hpp`:
-- `dirtyjtag/` (JTAG - direct CPU-GPIO bit-bang)
-- `swd/` (CMSIS-DAP & PIOC SWD)
-- `wchlink/` (RVSWIO & RVSWD transports + auto-detect)
-- `usb/` (both USB variants)
-- entry points `main_jtagswd.cpp` / `main_wchlink.cpp`
-- PIOC microcode is in `pioc/`.
+## Build & flash
+
+Clone the SDK submodule and build both products with a WCH-capable GNU RISC-V
+embedded toolchain supporting `rv32imacxw` (`riscv-none-embed`,
+`riscv-wch-elf`, `riscv-none-elf`, or another compatible prefix):
+
+```sh
+git submodule update --init
+make
+```
+
+The Makefile uses an explicit `RISCV_PREFIX` first, then a toolchain installed
+in `sdk/toolchain/`, then a compatible toolchain from `PATH`. For example, the
+PlatformIO-distributed GCC 8.2.0 used to validate this project can be installed
+directly in the repository without installing PlatformIO itself:
+
+```sh
+# macOS (the x86_64 build also runs on Apple Silicon through Rosetta)
+git clone --depth 1 --branch 8.2.0 \
+  https://github.com/Community-PIO-CH32V/toolchain-riscv-mac.git sdk/toolchain
+
+# Linux x86_64, including WSL2
+git clone --depth 1 --branch 8.2.0 \
+  https://github.com/Community-PIO-CH32V/toolchain-riscv-linux.git sdk/toolchain
+```
+
+`sdk/toolchain/` is intentionally ignored by Git. A system toolchain can instead
+be selected with `RISCV_PREFIX=/path/to/bin/riscv-prefix make`.
+
+The outputs are `build/jtagswd/tapioca-probe-jtagswd.bin`,
+`build/wchlink/tapioca-probe-wchlink.bin`, and the host-side
+`sdk/ch32fun/minichlink/minichlink`. If the compiler has a different prefix,
+pass it explicitly, for example `make RISCV_PREFIX=riscv64-unknown-elf`.
+
+Both products flash through the CH32X035 USB ISP bootloader with
+[`wchisp`](https://github.com/ch32-rs/wchisp) (hold **BOOT** while plugging in):
+
+```sh
+make flash-jtagswd   # product 1: JTAG + ARM SWD
+make flash-wchlink   # product 2: WCH-Link (auto RVSWIO/RVSWD)
+```
+
+On Linux, install the included udev rule once to access the CH32X035 ROM USB ISP
+bootloader without `sudo` (the user must belong to the `plugdev` group). Its
+VID/PID is independent of the identity used by the probe firmware:
+
+```sh
+sudo install -m 0644 udev/50-ch32-tapioca-probe.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+```
+
+Unplug and reconnect the probe in bootloader mode after installing the rule.
+
+Run the native unit tests with `make test`. See `make help` for the common
+targets. PC18/PC19 are the CH32X035's own SDI debug pins, so the probe itself is
+flashed over USB ISP, not SWD.
 
 ## Credits
 

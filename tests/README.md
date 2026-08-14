@@ -3,7 +3,13 @@
 Native host-side unit tests for the pure logic (codecs, protocol decoders). Each is a
 standalone C++ program with its own `main()` and `assert`s — no framework, no runner.
 
-Build and run one:
+Build and run the complete suite from the repository root:
+
+```sh
+make test
+```
+
+To build and run one manually:
 
 ```sh
 c++ -std=c++17 -Wall -Wextra -Isrc -Itests tests/<name>.cpp -o /tmp/<name> && /tmp/<name>
