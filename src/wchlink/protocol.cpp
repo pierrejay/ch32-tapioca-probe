@@ -25,6 +25,12 @@ constexpr uint8_t kCtrlStop = 0xff;
 // DMI operation codes (rx[8]).
 constexpr uint8_t kDmiOpRead = 0x01;
 constexpr uint8_t kDmiOpWrite = 0x02;
+constexpr uint8_t kDmiChipId = 0x7f;
+
+constexpr uint8_t kChipFamilyV20x = 0x05;
+constexpr uint8_t kChipFamilyV30x = 0x06;
+constexpr uint8_t kChipFamilyV003 = 0x09;
+constexpr uint8_t kChipFamilyX035 = 0x0d;
 
 // Reply status bytes: 0x02/0x03 are errors to the host (pgm-wch-linke.c:310,330).
 constexpr uint8_t kStatusOk = 0x00;
@@ -85,20 +91,46 @@ Result buildIdentity(uint8_t* tx)
     return {7, Status::Ok};
 }
 
-// Connect/detect reply: family followed by the four-byte chip ID. minichlink
-// ignores these fields with external detection enabled, while probe-rs parses
-// the framed payload strictly.
-Result buildConnectReply(uint8_t* tx)
+bool classifyChip(uint32_t chipId, uint8_t& family)
+{
+    switch ((chipId >> 20) & 0x0fffu)
+    {
+        case 0x003: family = kChipFamilyV003; return true;
+        case 0x035: family = kChipFamilyX035; return true;
+        case 0x203:
+        case 0x205:
+        case 0x208: family = kChipFamilyV20x; return true;
+        case 0x303:
+        case 0x305:
+        case 0x307: family = kChipFamilyV30x; return true;
+        default: return false;
+    }
+}
+
+// Connect/detect reply: family followed by the four-byte chip ID read from the
+// target's WCH-specific DMI register.
+Result buildConnectReply(uint8_t* tx, uint8_t family, uint32_t chipId)
 {
     tx[0] = kReplyPrefix;
     tx[1] = kFamilyControl;
     tx[2] = 0x05;
-    tx[3] = 0x09;
-    tx[4] = 0x00;
-    tx[5] = 0x30;
-    tx[6] = 0x05;
-    tx[7] = 0x00;
+    tx[3] = family;
+    tx[4] = static_cast<uint8_t>(chipId >> 24);
+    tx[5] = static_cast<uint8_t>(chipId >> 16);
+    tx[6] = static_cast<uint8_t>(chipId >> 8);
+    tx[7] = static_cast<uint8_t>(chipId);
     return {8, Status::Ok};
+}
+
+Result buildConnectError(uint8_t* tx)
+{
+    // WCH-Link failure framing recognized by minichlink's retry path and by
+    // probe-rs's protocol-error parser.
+    tx[0] = kCmdPrefix;
+    tx[1] = 0x55;
+    tx[2] = 0x01;
+    tx[3] = 0x01;
+    return {4, Status::TargetUnavailable};
 }
 
 } // namespace
@@ -176,8 +208,20 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
                     return buildIdentity(tx);
 
                 case kCtrlConnect:
+                {
                     connected_ = port.connect();
-                    return buildConnectReply(tx);
+                    uint32_t chipId = 0;
+                    uint8_t family = 0;
+                    if (!connected_ ||
+                        port.readDmi(kDmiChipId, chipId) != DmiStatus::Ok ||
+                        !classifyChip(chipId, family))
+                    {
+                        if (connected_) port.disconnect();
+                        connected_ = false;
+                        return buildConnectError(tx);
+                    }
+                    return buildConnectReply(tx, family, chipId);
+                }
 
                 case kCtrlStop:
                     reset(port);

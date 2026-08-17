@@ -36,7 +36,7 @@ public:
 
     // configuration
     bool connectResult = true;
-    uint32_t readValue = 0;
+    uint32_t readValue = 0x00300500; // CH32V003F4P6 identity register
     DmiStatus readStatus = DmiStatus::Ok;
     DmiStatus writeStatus = DmiStatus::Ok;
 
@@ -92,18 +92,66 @@ int main()
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(r.responseLength == sizeof(F::kConnectReply));
         assert(port.connectCalls == 1);
+        assert(port.readCalls == 1 && port.lastReadAddr == 0x7f);
         assert(core.connected());
         assert(memcmp(tx, F::kConnectReply, r.responseLength) == 0);
     }
 
-    // ---- connect with no target present: reply still valid, session not held ---
+    // ---- target identity selects the family and is returned big-endian ---------
+    {
+        struct IdentityCase { uint32_t chipId; uint8_t family; };
+        constexpr IdentityCase cases[] = {
+            {0x00300500, 0x09}, // CH32V003F4P6
+            {0x035e0601, 0x0d}, // CH32X035F8U6
+            {0x20370500, 0x05}, // CH32V203F6P6
+            {0x30700508, 0x06}, // CH32V307VCT6
+        };
+
+        for (const IdentityCase& identity : cases)
+        {
+            FakeDmiPort port;
+            port.readValue = identity.chipId;
+            WchLink::Core core;
+            const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
+            assert(r.status == WchLink::Status::Ok);
+            assert(r.responseLength == 8);
+            assert(tx[3] == identity.family);
+            assert(tx[4] == (uint8_t)(identity.chipId >> 24));
+            assert(tx[5] == (uint8_t)(identity.chipId >> 16));
+            assert(tx[6] == (uint8_t)(identity.chipId >> 8));
+            assert(tx[7] == (uint8_t)identity.chipId);
+            assert(core.connected());
+        }
+    }
+
+    // ---- connect with no target present: explicit error, session not held ------
     {
         FakeDmiPort port;
         port.connectResult = false;
         WchLink::Core core;
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
-        assert(r.responseLength == sizeof(F::kConnectReply));
+        assert(r.status == WchLink::Status::TargetUnavailable);
+        assert(r.responseLength == sizeof(F::kConnectErrorReply));
+        assert(memcmp(tx, F::kConnectErrorReply, r.responseLength) == 0);
+        assert(port.readCalls == 0);
         assert(!core.connected());
+    }
+
+    // ---- unreadable or unsupported identity also releases the session ----------
+    {
+        FakeDmiPort port;
+        port.readStatus = DmiStatus::Timeout;
+        WchLink::Core core;
+        auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::TargetUnavailable);
+        assert(port.disconnectCalls == 1 && !core.connected());
+
+        port = FakeDmiPort{};
+        port.readValue = 0xdeadbeef;
+        WchLink::Core otherCore;
+        r = otherCore.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::TargetUnavailable);
+        assert(port.disconnectCalls == 1 && !otherCore.connected());
     }
 
     // ---- DMI read: big-endian data from the fake, exact fixture reply ----------

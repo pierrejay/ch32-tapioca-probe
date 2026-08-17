@@ -26,6 +26,7 @@ enum class Status : uint8_t
     Ok,                 // recognized command, handled.
     TruncatedCommand,   // command too short for its family; error reply emitted.
     UnsupportedCommand, // unrecognized command; safe ack emitted.
+    TargetUnavailable,  // target absent, unreadable, or not recognized.
 };
 
 struct Result

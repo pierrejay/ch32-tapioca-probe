@@ -53,10 +53,13 @@ The machine-usable request/reply byte arrays live in
 `pgm-wch-linke.c:370,374,429,435`. Reply carries the family and four-byte chip ID:
 - retry if `transferred == 4` **[V-length]**, or if reply starts `81 55 01` **[V]**
   (`:371,436`) → probe must **not** produce those on success.
-- under FORCE_EXTERNAL detection, chip-id bytes `rbuff[3..5]` are **[I]**.
+- under FORCE_EXTERNAL detection, minichlink ignores the family and chip ID.
 - Documented genuine shape (comment `:370`): `82 0d 05 09 00 30 05 00`. The length
-  byte covers the five payload bytes. The firmware reproduces this framing; the
-  chip-id bytes are **[I]** placeholders for minichlink but parsed by probe-rs.
+  byte covers the five payload bytes. The firmware reads the target's WCH-specific
+  DMI register `0x7f`, maps it to the WCH family code, and returns the actual ID;
+  probe-rs uses both fields for target detection.
+- if the target is absent, unreadable, or unsupported, the firmware returns the
+  WCH error frame `81 55 01 01` and releases the wire session.
 
 ### `81 0c 02 <family> <speed>` — set target family + interface speed
 `pgm-wch-linke.c:376,411`. `family`=`target_chip_type`, `speed`=`interface_speed`
