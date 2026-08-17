@@ -18,6 +18,7 @@ int main()
         assert(f.reply != nullptr && f.replyLen >= 1);   // never a silent command
         assert(f.request[0] == 0x81);                    // host->probe command prefix
         assert(f.reply[0] == 0x82);                      // probe->host reply prefix
+        assert(f.replyLen == (size_t)f.reply[2] + 3);    // LEN describes payload
     }
 
     // Identity: type byte (offset 5) is 0x12 == 18 == WCH-LinkE, the one field the
@@ -40,7 +41,7 @@ int main()
     // The error fixture is actually flagged as an error by the host's rule.
     assert(F::dmiReplyIsError(F::kDmiErrorReply, sizeof(F::kDmiErrorReply)));
 
-    // Every LengthAndData / LengthAndStatus fixture is exactly the 9-byte DMI/connect
+    // Every LengthAndData / LengthAndStatus fixture is exactly the 9-byte DMI
     // shape the host length-checks.
     for (size_t i = 0; i < F::kCount; ++i)
     {

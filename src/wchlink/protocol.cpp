@@ -85,10 +85,10 @@ Result buildIdentity(uint8_t* tx)
     return {7, Status::Ok};
 }
 
-// Connect/detect reply: a 9-byte-shaped packet whose status byte (8) is not an
-// error and which does not collide with the host retry sentinels (len 4 / prefix
-// 81 55 01). Chip-id bytes are host-ignored under FORCE_EXTERNAL_CHIP_DETECTION.
-Result buildConnectReply(uint8_t* tx, bool present)
+// Connect/detect reply: family followed by the four-byte chip ID. minichlink
+// ignores these fields with external detection enabled, while probe-rs parses
+// the framed payload strictly.
+Result buildConnectReply(uint8_t* tx)
 {
     tx[0] = kReplyPrefix;
     tx[1] = kFamilyControl;
@@ -98,8 +98,7 @@ Result buildConnectReply(uint8_t* tx, bool present)
     tx[5] = 0x30;
     tx[6] = 0x05;
     tx[7] = 0x00;
-    tx[8] = present ? kStatusOk : kStatusError;
-    return {kDmiReplyLen, Status::Ok};
+    return {8, Status::Ok};
 }
 
 } // namespace
@@ -178,7 +177,7 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
 
                 case kCtrlConnect:
                     connected_ = port.connect();
-                    return buildConnectReply(tx, connected_);
+                    return buildConnectReply(tx);
 
                 case kCtrlStop:
                     reset(port);

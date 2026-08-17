@@ -40,9 +40,9 @@ inline constexpr uint8_t kIdentifyReply[] = {0x82, 0x0d, 0x04, 0x02, 0x08, 0x12,
 inline constexpr uint8_t kStopReq[]   = {0x81, 0x0d, 0x01, 0xff};
 inline constexpr uint8_t kStopReply[] = {0x82, 0x0d, 0x01, 0xff}; // [I] placeholder
 
-// ---- connect / detect (9-byte shape; must NOT be len==4 nor start 81 55 01) ----
+// ---- connect / detect (family + four-byte chip ID) -----------------------------
 inline constexpr uint8_t kConnectReq[]   = {0x81, 0x0d, 0x01, 0x02};
-inline constexpr uint8_t kConnectReply[] = {0x82, 0x0d, 0x05, 0x09, 0x00, 0x30, 0x05, 0x00, 0x00}; // [I] shape
+inline constexpr uint8_t kConnectReply[] = {0x82, 0x0d, 0x05, 0x09, 0x00, 0x30, 0x05, 0x00};
 
 // ---- set family + interface speed (reply ignored, must be non-empty) -----------
 inline constexpr uint8_t kSetSpeedReq[]   = {0x81, 0x0c, 0x02, 0x01, 0x02};
@@ -63,7 +63,7 @@ inline constexpr uint8_t kDmiErrorReply[] = {0x82, 0x08, 0x06, 0x11, 0x00, 0x00,
 
 // ---- recovery: hold, and force-reset-low --------------------------------------
 inline constexpr uint8_t kHoldReq[]   = {0x81, 0x0d, 0x01, 0x03};
-inline constexpr uint8_t kHoldReply[] = {0x82, 0x0d, 0x05, 0x09, 0x00, 0x30, 0x05, 0x00, 0x00}; // [I]
+inline constexpr uint8_t kHoldReply[] = {0x82, 0x0d, 0x01, 0x00}; // generic acknowledgement
 inline constexpr uint8_t kResetLowReq[]   = {0x81, 0x0d, 0x01, 0x13};
 inline constexpr uint8_t kResetLowReply[] = {0x82, 0x0d, 0x01, 0x13}; // [I] placeholder
 
@@ -73,7 +73,7 @@ inline constexpr uint8_t kResetLowReply[] = {0x82, 0x0d, 0x01, 0x13}; // [I] pla
 inline constexpr Fixture kAll[] = {
     WCHLINK_FIXTURE(kIdentify, ReplyContract::ExactBytes),
     WCHLINK_FIXTURE(kStop,     ReplyContract::NonEmptyOnly),
-    WCHLINK_FIXTURE(kConnect,  ReplyContract::LengthAndStatus),
+    WCHLINK_FIXTURE(kConnect,  ReplyContract::ExactBytes),
     WCHLINK_FIXTURE(kSetSpeed, ReplyContract::NonEmptyOnly),
     WCHLINK_FIXTURE(kDmiRead,  ReplyContract::LengthAndData),
     WCHLINK_FIXTURE(kDmiWrite, ReplyContract::LengthAndData),

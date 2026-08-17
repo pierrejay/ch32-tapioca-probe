@@ -85,15 +85,15 @@ int main()
         assert(!core.connected());
     }
 
-    // ---- connect: 9-byte reply, session becomes connected ----------------------
+    // ---- connect: framed chip identity, session becomes connected --------------
     {
         FakeDmiPort port;
         WchLink::Core core;
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
-        assert(r.responseLength == 9);
+        assert(r.responseLength == sizeof(F::kConnectReply));
         assert(port.connectCalls == 1);
         assert(core.connected());
-        assert(!F::dmiReplyIsError(tx, (uint8_t)r.responseLength)); // status byte not an error
+        assert(memcmp(tx, F::kConnectReply, r.responseLength) == 0);
     }
 
     // ---- connect with no target present: reply still valid, session not held ---
@@ -102,7 +102,7 @@ int main()
         port.connectResult = false;
         WchLink::Core core;
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
-        assert(r.responseLength == 9);
+        assert(r.responseLength == sizeof(F::kConnectReply));
         assert(!core.connected());
     }
 

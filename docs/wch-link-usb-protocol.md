@@ -50,12 +50,13 @@ The machine-usable request/reply byte arrays live in
 `reply=NULL` → content **[I]**, but a non-empty reply is mandatory (see transport).
 
 ### `81 0d 01 02` — connect / detect target
-`pgm-wch-linke.c:370,374,429,435`. Reply is a 9-byte-shaped packet; host checks:
+`pgm-wch-linke.c:370,374,429,435`. Reply carries the family and four-byte chip ID:
 - retry if `transferred == 4` **[V-length]**, or if reply starts `81 55 01` **[V]**
   (`:371,436`) → probe must **not** produce those on success.
 - under FORCE_EXTERNAL detection, chip-id bytes `rbuff[3..5]` are **[I]**.
-- Documented genuine shape (comment `:370`): `82 0d 05 09 00 30 05 00`. The firmware
-  replies with this shape; chip-id bytes are **[I]** placeholders.
+- Documented genuine shape (comment `:370`): `82 0d 05 09 00 30 05 00`. The length
+  byte covers the five payload bytes. The firmware reproduces this framing; the
+  chip-id bytes are **[I]** placeholders for minichlink but parsed by probe-rs.
 
 ### `81 0c 02 <family> <speed>` — set target family + interface speed
 `pgm-wch-linke.c:376,411`. `family`=`target_chip_type`, `speed`=`interface_speed`
@@ -78,7 +79,8 @@ reply mandatory.
 - `resplen`/`transferred` **must be 9** or the host errors (`:310,330`) → **[V-length]**.
 
 ### `81 0d 01 03` — hold / recovery
-`pgm-wch-linke.c:455,582`. Reply **[I]**, shape `82 0d 05 09 00 30 05 00` (comment).
+`pgm-wch-linke.c:455,582`. Reply **[I]**; the firmware returns a framed generic
+acknowledgement.
 
 ### `81 0d 01 13` — force reset line low (host fallback)
 `wch_link_multicommands`, `pgm-wch-linke.c:449`. Reply **[I]**, non-empty mandatory.
