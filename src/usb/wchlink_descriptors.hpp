@@ -55,9 +55,9 @@ constexpr uint8_t manufacturer[] =
 
 constexpr uint8_t product[] =
 {
-    0x22, 0x03,
-    'W',0,'C',0,'H',0,'-',0,'L',0,'i',0,'n',0,'k',0,' ',0,
-    'T',0,'a',0,'p',0,'i',0,'o',0,'c',0,'a',0
+    // probe-rs v0.32 matches this product string exactly.
+    0x12, 0x03,
+    'W',0,'C',0,'H',0,'-',0,'L',0,'i',0,'n',0,'k',0
 };
 
 // The Serial string (index 3) is built at runtime from the chip UID; see
