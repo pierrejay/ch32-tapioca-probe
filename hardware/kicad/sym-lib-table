@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "ch32x035_t-easyedapro") (type "KiCad") (uri "${KIPRJMOD}/ch32x035_t-easyedapro.kicad_sym") (options "") (descr ""))
+)

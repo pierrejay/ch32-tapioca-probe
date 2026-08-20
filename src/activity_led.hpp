@@ -1,4 +1,4 @@
-// Activity LED, defaulting to the WeAct board's active-high PB12.
+// Activity LED, defaulting to the reference board's active-high PA2.
 // Override LED_PIN with a ch32fun pin name; LED_PIN=-1 disables it.
 #pragma once
 
@@ -6,7 +6,7 @@
 #include "time.hpp"
 
 #ifndef LED_PIN
-#define LED_PIN PB12
+#define LED_PIN PA2
 #endif
 
 namespace ActivityLed

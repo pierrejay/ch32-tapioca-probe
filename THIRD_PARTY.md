@@ -1,6 +1,8 @@
 # Third-party provenance
 
-This project is MIT-licensed (see [`LICENSE`](LICENSE)) & builds on several upstream projects and public protocol specifications.
+The software is MIT-licensed and the reference hardware is CERN-OHL-P-2.0-licensed
+(see [`LICENSE`](LICENSE)). The project builds on several upstream projects and
+public protocol specifications.
 
 ## Redistributed / adapted code
 
@@ -16,7 +18,7 @@ This project is MIT-licensed (see [`LICENSE`](LICENSE)) & builds on several upst
 - Used in: the PIOC bit-bang primitives and timing this project reuses —
   [`src/hal/time.hpp`](src/hal/time.hpp) / [`.cpp`](src/hal/time.cpp) (lifted from the Tapioca HAL), the SWD physical layer in
   [`src/swd/`](src/swd/) (built on Tapioca's PIOC timing), and the `tapioca_*.ASM` engines in [`pioc/`](pioc/).
-- Same author; carried over under this project's MIT license.
+- Same author; carried over under the software's MIT license.
 
 ### ch32fun (Charles Lohr and contributors)
 

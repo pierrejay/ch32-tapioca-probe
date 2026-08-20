@@ -1,13 +1,25 @@
 PROJECT := tapioca-probe
 PROFILE ?= jtagswd
+BOARD ?= reference
+
+ifeq ($(BOARD),reference)
+BOARD_SUFFIX :=
+BOARD_CPPFLAGS :=
+else ifeq ($(BOARD),weact)
+BOARD_SUFFIX := -weact
+BOARD_CPPFLAGS := -DLED_PIN=PB12
+else
+$(error Unknown BOARD '$(BOARD)'; expected one of: reference weact)
+endif
 
 CH32FUN := sdk/ch32fun/ch32fun
 MINICHLINK_DIR := sdk/ch32fun/minichlink
 MINICHLINK := $(MINICHLINK_DIR)/minichlink
 LINKER_SCRIPT := ldscript/Link_CH32X035_pioc.ld
 BUILD_ROOT := build
-BUILD_DIR := $(BUILD_ROOT)/$(PROFILE)
-TARGET := $(BUILD_DIR)/$(PROJECT)-$(PROFILE)
+BUILD_NAME := $(PROFILE)$(BOARD_SUFFIX)
+BUILD_DIR := $(BUILD_ROOT)/$(BUILD_NAME)
+TARGET := $(BUILD_DIR)/$(PROJECT)-$(BUILD_NAME)
 
 ARCH_FLAGS := -march=rv32imacxw -mabi=ilp32
 REPO_RISCV_PREFIX := $(abspath sdk/toolchain/bin/riscv-none-embed)
@@ -44,7 +56,7 @@ CODEGEN_FLAGS := $(ARCH_FLAGS) -Os -g -flto -ffunction-sections -fdata-sections 
 COMMON_FLAGS := $(CODEGEN_FLAGS) -Wall -Wextra -MMD -MP \
 	-DCH32X035F8 -DCH32X03X -DCH32X03x -DCH32X035 \
 	-DFUNCONF_ENABLE_HPE=1 \
-	-Isrc -Isrc/hal -I$(CH32FUN) $(EXTRA_CPPFLAGS)
+	-Isrc -Isrc/hal -I$(CH32FUN) $(BOARD_CPPFLAGS) $(EXTRA_CPPFLAGS)
 CFLAGS := $(COMMON_FLAGS) -std=gnu11
 CXXFLAGS := $(COMMON_FLAGS) -std=gnu++17 -fno-exceptions -fno-rtti \
 	-fno-threadsafe-statics -fno-use-cxa-atexit
@@ -118,6 +130,7 @@ help:
 		'make wchlink         Build the auto-detecting WCH-Link firmware' \
 		'make flash-jtagswd   Build and flash JTAG/SWD through USB ISP' \
 		'make flash-wchlink   Build and flash WCH-Link through USB ISP' \
+		'make BOARD=weact ... Build a WeAct-board variant using LED PB12' \
 		'make minichlink      Build the pinned host-side minichlink' \
 		'make probe-wchlink   Identify a WCH target through the probe' \
 		'make test            Build and run all host-side tests' \
@@ -168,10 +181,10 @@ regenerate-pioc:
 	@for source in $(PIOC_ASM); do $(PYTHON) pioc/assemble.py $$source --write || exit; done
 
 flash-jtagswd: jtagswd
-	$(WCHISP) flash $(BUILD_ROOT)/jtagswd/$(PROJECT)-jtagswd.bin
+	$(WCHISP) flash $(BUILD_ROOT)/jtagswd$(BOARD_SUFFIX)/$(PROJECT)-jtagswd$(BOARD_SUFFIX).bin
 
 flash-wchlink: wchlink
-	$(WCHISP) flash $(BUILD_ROOT)/wchlink/$(PROJECT)-wchlink.bin
+	$(WCHISP) flash $(BUILD_ROOT)/wchlink$(BOARD_SUFFIX)/$(PROJECT)-wchlink$(BOARD_SUFFIX).bin
 
 minichlink: check-submodules
 	$(MAKE) -C $(MINICHLINK_DIR) minichlink

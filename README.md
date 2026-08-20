@@ -9,9 +9,13 @@ It reuses the proven PIOC primitives from the sibling [**Tapioca**](https://gith
 
 Based on the [ch32fun](https://github.com/cnlohr/ch32fun) SDK.
 
+A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVSWIO, RVSWD) is also provided with EasyEDA & KiCad source files.
+
+<img src="hardware/pcb_pic_probe.png" alt="CH32 Tapioca Probe reference board" width="300">
+
 ## Why?
 
-- The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB DFU bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**, and you could add a UART bridge, etc. just as easily.
+- The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**, and you could add a UART bridge, etc. just as easily.
 - The PIOC (RISC8B coprocessor) is perfect for emulating single- or two-wire protocols deterministically.
 
 ## Tested
@@ -23,9 +27,10 @@ Based on the [ch32fun](https://github.com/cnlohr/ch32fun) SDK.
 | CH32 | RVSWIO (1-wire) | CH32V003 | minichlink |
 | CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink |
 
-Reference dev board: [WeAct Studio CH32X035 Core Board](https://github.com/WeActStudio/WeActStudio.CH32X035CoreBoard). Its on-board LED (PB12) is driven as an activity light, it flickers while the probe is talking to a target. After `make clean`, change the pin with a ch32fun pin name such as `make EXTRA_CPPFLAGS=-DLED_PIN=PA5`, or turn it off with `make EXTRA_CPPFLAGS=-DLED_PIN=-1`.
+The reference board's LED on `PA2` flickers while the probe is talking to a
+target.
 
-## Structure & modes
+## Features
 
 Both firmwares currently act as host-driven transports: the probe executes the timing-critical JTAG, SWD or WCH DMI wire transactions, while OpenOCD, probe-rs or minichlink owns the target-specific flash algorithm. This keeps the firmware small and deterministic and preserves compatibility with existing debugging tools.
 
@@ -92,18 +97,6 @@ One data line, plus a clock for the 2-wire parts:
 - Some older `minichlink` builds don't drive direct-DMI. `make minichlink` builds
   the pinned version directly from the ch32fun submodule.
 
-```sh
-# with the probe wired to the target:
-make probe-wchlink   # build minichlink, then detect the chip
-```
-
-## USB identity: disclaimer
-
-Both firmwares borrow **VID/PIDs assigned to other projects/vendors** (DirtyJTAG's `1209:C0CA` and WCH-LinkE's `1a86:8010`) so that host tools like openFPGALoader, OpenOCD, probe-rs, minichlink detect the probe out of the box, with zero configuration. That is a deliberate convenience for an experimental, non-commercial project.
-
-⚠️ **These identities are not ours**: this is not an official DirtyJTAG, WCH, or Arm product. If you build on this, it is your responsibility to assign a real USB identity (e.g. a [pid.codes](https://pid.codes) allocation) before distributing anything, and to not pass the probe off as an existing vendor's product.
-
-
 ## Build & flash
 
 Clone the SDK submodule and build both products with a WCH-capable GNU RISC-V
@@ -121,7 +114,7 @@ PlatformIO-distributed GCC 8.2.0 used to validate this project can be installed
 directly in the repository without installing PlatformIO itself:
 
 ```sh
-# macOS (the x86_64 build also runs on Apple Silicon through Rosetta)
+# macOS
 git clone --depth 1 --branch 8.2.0 \
   https://github.com/Community-PIO-CH32V/toolchain-riscv-mac.git sdk/toolchain
 
@@ -130,16 +123,11 @@ git clone --depth 1 --branch 8.2.0 \
   https://github.com/Community-PIO-CH32V/toolchain-riscv-linux.git sdk/toolchain
 ```
 
-`sdk/toolchain/` is intentionally ignored by Git. A system toolchain can instead
-be selected with `RISCV_PREFIX=/path/to/bin/riscv-prefix make`.
-
-The outputs are `build/jtagswd/tapioca-probe-jtagswd.bin`,
-`build/wchlink/tapioca-probe-wchlink.bin`, and the host-side
-`sdk/ch32fun/minichlink/minichlink`. If the compiler has a different prefix,
+If the compiler has a different prefix,
 pass it explicitly, for example `make RISCV_PREFIX=riscv64-unknown-elf`.
 
 Both products flash through the CH32X035 USB ISP bootloader with
-[`wchisp`](https://github.com/ch32-rs/wchisp) (hold **BOOT** while plugging in):
+[`wchisp`](https://github.com/ch32-rs/wchisp) (hold `BOOT` while plugging in):
 
 ```sh
 make flash-jtagswd   # product 1: JTAG + ARM SWD
@@ -160,6 +148,16 @@ Unplug and reconnect the probe in bootloader mode after installing the rule.
 Run the native unit tests with `make test`. See `make help` for the common
 targets. PC18/PC19 are the CH32X035's own SDI debug pins, so the probe itself is
 flashed over USB ISP, not SWD.
+
+## USB identity: disclaimer
+
+Both firmwares borrow **VID/PIDs assigned to other projects/vendors** (DirtyJTAG's `1209:C0CA` and WCH-LinkE's `1a86:8010`) so that host tools like openFPGALoader, OpenOCD, probe-rs, minichlink detect the probe out of the box, with zero configuration. That is a deliberate convenience for an experimental, non-commercial project.
+
+⚠️ **These identities are not ours**: this is not an official DirtyJTAG, WCH, or Arm product. If you build on this, it is your responsibility to assign a real USB identity (e.g. a [pid.codes](https://pid.codes) allocation) before distributing anything, and to not pass the probe off as an existing vendor's product.
+
+A `pid.codes` allocation is planned for the reference probe. Until it is assigned
+and host-tool compatibility has been checked, the borrowed identities remain for
+development use only.
 
 ## Credits
 
