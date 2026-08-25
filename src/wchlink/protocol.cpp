@@ -27,10 +27,18 @@ constexpr uint8_t kDmiOpRead = 0x01;
 constexpr uint8_t kDmiOpWrite = 0x02;
 constexpr uint8_t kDmiChipId = 0x7f;
 
+constexpr uint8_t kChipFamilyV10x = 0x01;
 constexpr uint8_t kChipFamilyV20x = 0x05;
 constexpr uint8_t kChipFamilyV30x = 0x06;
 constexpr uint8_t kChipFamilyV003 = 0x09;
-constexpr uint8_t kChipFamilyX035 = 0x0d;
+constexpr uint8_t kChipFamilyCh643 = 0x0c;
+constexpr uint8_t kChipFamilyX03x = 0x0d;
+constexpr uint8_t kChipFamilyL103 = 0x0e;
+constexpr uint8_t kChipFamilyCh641 = 0x49;
+constexpr uint8_t kChipFamilyV00x = 0x4e;
+constexpr uint8_t kChipFamilyV317 = 0x86;
+constexpr uint8_t kChipFamilyH41x = 0xc6;
+constexpr uint8_t kChipFamilyV205 = 0xce;
 
 // Reply status bytes: 0x02/0x03 are errors to the host (pgm-wch-linke.c:310,330).
 constexpr uint8_t kStatusOk = 0x00;
@@ -95,14 +103,28 @@ bool classifyChip(uint32_t chipId, uint8_t& family)
 {
     switch ((chipId >> 20) & 0x0fffu)
     {
+        case 0x002:
+        case 0x004:
+        case 0x005:
+        case 0x006:
+        case 0x007: family = kChipFamilyV00x; return true;
         case 0x003: family = kChipFamilyV003; return true;
-        case 0x035: family = kChipFamilyX035; return true;
+        case 0x033:
+        case 0x035: family = kChipFamilyX03x; return true;
+        case 0x103: family = kChipFamilyL103; return true;
         case 0x203:
-        case 0x205:
         case 0x208: family = kChipFamilyV20x; return true;
+        case 0x205: family = kChipFamilyV205; return true;
+        case 0x250: family = kChipFamilyV10x; return true;
         case 0x303:
         case 0x305:
         case 0x307: family = kChipFamilyV30x; return true;
+        case 0x317: family = kChipFamilyV317; return true;
+        case 0x415:
+        case 0x416:
+        case 0x417: family = kChipFamilyH41x; return true;
+        case 0x641: family = kChipFamilyCh641; return true;
+        case 0x643: family = kChipFamilyCh643; return true;
         default: return false;
     }
 }

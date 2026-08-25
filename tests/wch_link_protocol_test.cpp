@@ -101,10 +101,28 @@ int main()
     {
         struct IdentityCase { uint32_t chipId; uint8_t family; };
         constexpr IdentityCase cases[] = {
+            {0x00200600, 0x4e}, // CH32V002F4P6
             {0x00300500, 0x09}, // CH32V003F4P6
+            {0x00400600, 0x4e}, // CH32V004F6P1
+            {0x00500600, 0x4e}, // CH32V005E6R6
+            {0x00600600, 0x4e}, // CH32V006K8U6
+            {0x00710600, 0x4e}, // CH32V007E8R6
+            {0x035a0601, 0x0d}, // CH32X033F8P6
             {0x035e0601, 0x0d}, // CH32X035F8U6
+            {0x10310700, 0x0e}, // CH32L103C8T6
             {0x20370500, 0x05}, // CH32V203F6P6
+            {0x20500500, 0xce}, // CH32V205
+            {0x2080050c, 0x05}, // CH32V208WBU6
+            {0x25004102, 0x01}, // CH32V103C8T6
+            {0x30330504, 0x06}, // CH32V303CBT6
+            {0x30520508, 0x06}, // CH32V305FBP6
             {0x30700508, 0x06}, // CH32V307VCT6
+            {0x3170b508, 0x86}, // CH32V317VCT6
+            {0x4150050d, 0xc6}, // CH32H415REU6
+            {0x4160050d, 0xc6}, // CH32H416RDU6
+            {0x4170051d, 0xc6}, // CH32H417QEU6
+            {0x64100500, 0x49}, // CH641F
+            {0x64300601, 0x0c}, // CH643W
         };
 
         for (const IdentityCase& identity : cases)
