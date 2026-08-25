@@ -24,7 +24,7 @@ A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVS
 |---|---|---|---|
 | ARM | JTAG | STM32H523, STM32G431 | openFPGALoader, OpenOCD |
 | ARM | SWD (CMSIS-DAP) | STM32H523, STM32G431 | OpenOCD, probe-rs |
-| CH32 | RVSWIO (1-wire) | CH32V003 | minichlink |
+| CH32 | RVSWIO (1-wire) | CH32V003, CH32H417 | minichlink |
 | CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink |
 
 The reference board's LED on `PA2` flickers while the probe is talking to a
