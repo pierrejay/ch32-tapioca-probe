@@ -16,6 +16,8 @@ public:
     bool connect() override;
     WchLink::DmiStatus readDmi(uint8_t address, uint32_t& value) override;
     WchLink::DmiStatus writeDmi(uint8_t address, uint32_t value) override;
+    bool getDiagnostics(WchLink::DmiDiagnostics& diagnostics) const override;
+    void clearDiagnostics() override;
     void disconnect() override;
 
 private:
@@ -28,4 +30,5 @@ private:
     Ch32PiocRvswio rvswio_;
     Ch32PiocRvswd rvswd_;
     Transport transport_ = Transport::None;
+    Transport lastTransport_ = Transport::None;
 };

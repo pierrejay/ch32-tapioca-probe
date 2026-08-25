@@ -91,6 +91,26 @@ acknowledgement.
 ### Seen in the reset dance (implement as no-op acks first)
 - `81 0b 01 01` (`:462`), `81 0d 01 0f 09` (`:634`) — reply **[I]**, non-empty.
 
+## Tapioca-private transport diagnostics
+
+The probe reserves family `0x7f` for passive post-mortem diagnostics. Stock
+WCH-Link hosts do not send this family, so it does not alter their protocol flow or
+start a new target session.
+
+- `81 7f 01 00` returns a versioned 43-byte snapshot: selected transport
+  (RVSWD/RVSWIO), first latched wire error and raw reply, plus frame, busy, target
+  fault, parity-error and engine-timeout counters.
+- `81 7f 01 01` clears both transport snapshots.
+- A successful target attach clears prior evidence. The first subsequent error is
+  latched while counters continue, including through normal session cleanup.
+
+Build and query the reader with:
+
+```sh
+make diagnose-wchlink SERIAL=<probe-serial>
+make diagnose-wchlink SERIAL=<probe-serial> DIAG_ARGS=--clear
+```
+
 ## Error / negative fixtures
 - DMI error: reply `… <status=0x02>` → host takes the error branch (`:310,330`).
 - Absent target: host expects the connect retry loop to terminate via bounded

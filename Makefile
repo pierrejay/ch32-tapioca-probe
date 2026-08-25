@@ -46,9 +46,12 @@ CXX := $(RISCV_PREFIX)-g++
 OBJCOPY := $(RISCV_PREFIX)-objcopy
 SIZE := $(RISCV_PREFIX)-size
 HOST_CXX ?= c++
+HOST_CC ?= cc
 PYTHON ?= python3
 WCHISP ?= wchisp
 EXTRA_CPPFLAGS ?=
+LIBUSB_CFLAGS ?= $(shell pkg-config --cflags libusb-1.0 2>/dev/null)
+LIBUSB_LIBS ?= $(shell pkg-config --libs libusb-1.0 2>/dev/null)
 
 CODEGEN_FLAGS := $(ARCH_FLAGS) -Os -g -flto -ffunction-sections -fdata-sections \
 	-fmessage-length=0 -msmall-data-limit=8 -msave-restore -fsigned-char \
@@ -118,6 +121,7 @@ PIOC_ASM := pioc/tapioca_swd.ASM pioc/tapioca_rvswio.ASM pioc/tapioca_rvswd.ASM
 .DEFAULT_GOAL := all
 
 .PHONY: all firmware help jtagswd $(WCH_PROFILES) minichlink probe-wchlink \
+	wchlink-diag diagnose-wchlink \
 	flash-jtagswd flash-wchlink verify-pioc regenerate-pioc test clean distclean \
 	check-tools check-submodules
 
@@ -133,6 +137,7 @@ help:
 		'make BOARD=weact ... Build a WeAct-board variant using LED PB12' \
 		'make minichlink      Build the pinned host-side minichlink' \
 		'make probe-wchlink   Identify a WCH target through the probe' \
+		'make diagnose-wchlink Read latched WCH transport diagnostics' \
 		'make test            Build and run all host-side tests' \
 		'make verify-pioc     Check that generated PIOC headers are current'
 
@@ -191,6 +196,18 @@ minichlink: check-submodules
 
 probe-wchlink: minichlink
 	$(MINICHLINK) -C linke -i
+
+WCHLINK_DIAG := $(BUILD_ROOT)/host/wchlink-diag
+
+wchlink-diag: $(WCHLINK_DIAG)
+
+diagnose-wchlink: wchlink-diag
+	$(WCHLINK_DIAG) $(SERIAL) $(DIAG_ARGS)
+
+$(WCHLINK_DIAG): sdk/wchlink_diag.c
+	@mkdir -p $(@D)
+	@test -n "$(LIBUSB_LIBS)" || { echo "libusb-1.0 development files not found by pkg-config." >&2; exit 1; }
+	$(HOST_CC) -std=c11 -O2 -Wall -Wextra $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) -o $@
 
 HOST_TESTS := packet_order_test pioc_swd_protocol_test wch_rvswd_frame_test \
 	wch_link_fixtures_test cmsis_dap_test protocol_test wch_link_protocol_test

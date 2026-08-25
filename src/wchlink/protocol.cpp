@@ -14,6 +14,7 @@ constexpr uint8_t kFamilyDmi = 0x08;   // 81 08 06 <reg> <d3..d0> <op>
 constexpr uint8_t kFamilySpeed = 0x0c; // 81 0c 02 <family> <speed>
 constexpr uint8_t kFamilyControl = 0x0d;
 constexpr uint8_t kFamilyReset = 0x0b; // 81 0b 01 01 (seen in the reset dance)
+constexpr uint8_t kFamilyDiagnostics = 0x7f; // Tapioca-private, never sent by WCH hosts.
 
 // Control subcommands (rx[3]) for the 0x0d family.
 constexpr uint8_t kCtrlIdentify = 0x01;
@@ -21,6 +22,9 @@ constexpr uint8_t kCtrlConnect = 0x02;
 constexpr uint8_t kCtrlHold = 0x03;
 constexpr uint8_t kCtrlResetLow = 0x13;
 constexpr uint8_t kCtrlStop = 0xff;
+
+constexpr uint8_t kDiagQuery = 0x00;
+constexpr uint8_t kDiagClear = 0x01;
 
 // DMI operation codes (rx[8]).
 constexpr uint8_t kDmiOpRead = 0x01;
@@ -51,6 +55,7 @@ constexpr uint8_t kFirmwareMajor = 0x02;
 constexpr uint8_t kFirmwareMinor = 0x08;
 
 constexpr uint8_t kDmiReplyLen = 9;
+constexpr size_t kDiagnosticsReplyLen = 43;
 
 uint8_t statusByte(DmiStatus status)
 {
@@ -84,6 +89,44 @@ void writeDmiReply(uint8_t* tx, uint8_t reg, uint32_t data, uint8_t status)
     tx[6] = static_cast<uint8_t>(data >> 8);
     tx[7] = static_cast<uint8_t>(data);
     tx[8] = status;
+}
+
+void writeU32(uint8_t* out, uint32_t value)
+{
+    out[0] = static_cast<uint8_t>(value >> 24);
+    out[1] = static_cast<uint8_t>(value >> 16);
+    out[2] = static_cast<uint8_t>(value >> 8);
+    out[3] = static_cast<uint8_t>(value);
+}
+
+Result buildDiagnostics(IDmi& port, uint8_t* tx)
+{
+    DmiDiagnostics diagnostics;
+    const bool supported = port.getDiagnostics(diagnostics);
+
+    tx[0] = kReplyPrefix;
+    tx[1] = kFamilyDiagnostics;
+    tx[2] = static_cast<uint8_t>(kDiagnosticsReplyLen - 3);
+    tx[3] = 0x01; // diagnostics format version
+    tx[4] = supported ? 1 : 0;
+    tx[5] = diagnostics.valid ? 1 : 0;
+    tx[6] = static_cast<uint8_t>(diagnostics.transport);
+    tx[7] = static_cast<uint8_t>(diagnostics.operation);
+    tx[8] = diagnostics.address;
+    tx[9] = static_cast<uint8_t>(diagnostics.status);
+    tx[10] = diagnostics.rawStatus;
+    tx[11] = diagnostics.receivedParity;
+    tx[12] = diagnostics.expectedParity;
+    tx[13] = diagnostics.rawLength;
+    for (size_t i = 0; i < sizeof(diagnostics.raw); ++i)
+        tx[14 + i] = diagnostics.raw[i];
+    writeU32(tx + 19, diagnostics.data);
+    writeU32(tx + 23, diagnostics.wireFrames);
+    writeU32(tx + 27, diagnostics.busyReplies);
+    writeU32(tx + 31, diagnostics.targetFaults);
+    writeU32(tx + 35, diagnostics.parityErrors);
+    writeU32(tx + 39, diagnostics.engineTimeouts);
+    return {kDiagnosticsReplyLen, Status::Ok};
 }
 
 // Identity reply: 82 0d 04 <maj> <min> <type> 00 (7 bytes).
@@ -217,6 +260,18 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
         case kFamilyReset: // 81 0b 01 01
             return ack(tx, kFamilyReset, Status::Ok);
 
+        case kFamilyDiagnostics:
+            if (rxLength < 4)
+                return ack(tx, kFamilyDiagnostics, Status::TruncatedCommand);
+            if (rx[3] == kDiagClear)
+            {
+                port.clearDiagnostics();
+                return ack(tx, kFamilyDiagnostics, Status::Ok);
+            }
+            if (rx[3] == kDiagQuery && txCapacity >= kDiagnosticsReplyLen)
+                return buildDiagnostics(port, tx);
+            return ack(tx, kFamilyDiagnostics, Status::UnsupportedCommand);
+
         case kFamilyControl:
         {
             if (rxLength < 4)
@@ -242,6 +297,9 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
                         connected_ = false;
                         return buildConnectError(tx);
                     }
+                    // Start the post-attach capture from a known clean point; if
+                    // attachment itself fails, its evidence remains available.
+                    port.clearDiagnostics();
                     return buildConnectReply(tx, family, chipId);
                 }
 

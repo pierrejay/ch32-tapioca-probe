@@ -23,6 +23,7 @@ void Ch32WchAutoPort::init()
     rvswio_.init();
     rvswd_.init();
     transport_ = Transport::None;
+    lastTransport_ = Transport::None;
 }
 
 WchLink::IDmi* Ch32WchAutoPort::active()
@@ -40,6 +41,7 @@ bool Ch32WchAutoPort::connect()
     transport_ = Transport::None;
 
     // Two-wire first, then one-wire; the transport whose DMSTATUS answers sanely wins.
+    lastTransport_ = Transport::Rvswd;
     if (wireResponds(rvswd_))
     {
         transport_ = Transport::Rvswd;
@@ -47,6 +49,7 @@ bool Ch32WchAutoPort::connect()
     }
     rvswd_.disconnect(); // release the wire before loading the other engine
 
+    lastTransport_ = Transport::Rvswio;
     if (wireResponds(rvswio_))
     {
         transport_ = Transport::Rvswio;
@@ -75,6 +78,22 @@ DmiStatus Ch32WchAutoPort::writeDmi(uint8_t address, uint32_t value)
     WchLink::IDmi* port = active();
     if (port == nullptr) return DmiStatus::ProtocolFault;
     return port->writeDmi(address, value);
+}
+
+bool Ch32WchAutoPort::getDiagnostics(WchLink::DmiDiagnostics& diagnostics) const
+{
+    switch (lastTransport_)
+    {
+        case Transport::Rvswd: return rvswd_.getDiagnostics(diagnostics);
+        case Transport::Rvswio: return rvswio_.getDiagnostics(diagnostics);
+        default: return false;
+    }
+}
+
+void Ch32WchAutoPort::clearDiagnostics()
+{
+    rvswd_.clearDiagnostics();
+    rvswio_.clearDiagnostics();
 }
 
 void Ch32WchAutoPort::disconnect()

@@ -8,6 +8,7 @@ extern "C" {
 }
 
 using WchLink::DmiStatus;
+using WchLink::DmiOperation;
 namespace R = WchLink::Rvswd;
 
 namespace
@@ -68,6 +69,7 @@ DmiStatus mapStatus(uint8_t raw)
 
 void Ch32PiocRvswd::init()
 {
+    clearDiagnostics();
     RCC->APB2PCENR |= RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO;
     RCC->AHBPCENR |= RCC_AHBPeriph_IO2W;
     AFIO->PCFR1 = (AFIO->PCFR1 & ~AFIO_PCFR1_SWJ_CFG) | AFIO_PCFR1_SWJ_CFG_DISABLE;
@@ -76,6 +78,40 @@ void Ch32PiocRvswd::init()
     engineLoaded_ = false;
     // Park both wires as floating inputs until a transaction is requested.
     configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+}
+
+bool Ch32PiocRvswd::getDiagnostics(WchLink::DmiDiagnostics& diagnostics) const
+{
+    diagnostics = diagnostics_;
+    return true;
+}
+
+void Ch32PiocRvswd::clearDiagnostics()
+{
+    diagnostics_ = {};
+    diagnostics_.transport = WchLink::DmiTransport::Rvswd;
+}
+
+void Ch32PiocRvswd::latchError(DmiOperation operation, uint8_t address,
+                               uint32_t data, DmiStatus status,
+                               uint8_t rawStatus, const uint8_t* raw,
+                               uint8_t rawLength, uint8_t receivedParity,
+                               uint8_t expectedParity)
+{
+    if (diagnostics_.valid) return;
+
+    diagnostics_.valid = true;
+    diagnostics_.operation = operation;
+    diagnostics_.address = address;
+    diagnostics_.status = status;
+    diagnostics_.rawStatus = rawStatus;
+    diagnostics_.receivedParity = receivedParity;
+    diagnostics_.expectedParity = expectedParity;
+    diagnostics_.rawLength = rawLength > sizeof(diagnostics_.raw) ?
+                             sizeof(diagnostics_.raw) : rawLength;
+    if (raw != nullptr)
+        memcpy(diagnostics_.raw, raw, diagnostics_.rawLength);
+    diagnostics_.data = data;
 }
 
 void Ch32PiocRvswd::loadEngine()
@@ -139,6 +175,7 @@ bool Ch32PiocRvswd::runFrame(uint8_t command)
 
 bool Ch32PiocRvswd::connect()
 {
+    clearDiagnostics();
     if (!engineLoaded_) loadEngine();
 
     // WCH QingKe debug init (same DMI-level sequence as RVSWIO/minichlink): unlock
@@ -178,14 +215,34 @@ WchLink::DmiStatus Ch32PiocRvswd::writeDmi(uint8_t address, uint32_t value)
     const uint32_t startedUs = Time::micros();
     while (true)
     {
-        if (!runFrame(0x00)) return DmiStatus::Timeout; // CTRL bit0 clear = write
+        ++diagnostics_.wireFrames;
+        if (!runFrame(0x00))
+        {
+            ++diagnostics_.engineTimeouts;
+            latchError(DmiOperation::Write, address, value, DmiStatus::Timeout,
+                       0xff, nullptr, 0);
+            return DmiStatus::Timeout;
+        }
 
         uint8_t targ[R::kFrameBytes] = {};
         targ[0] = R8_DATA_REG11;
-        const DmiStatus status = mapStatus(R::unpackWriteStatus(targ));
-        if (status != DmiStatus::Busy) return status;
+        const uint8_t rawStatus = R::unpackWriteStatus(targ);
+        const DmiStatus status = mapStatus(rawStatus);
+        if (status == DmiStatus::Ok) return status;
+        if (status != DmiStatus::Busy)
+        {
+            ++diagnostics_.targetFaults;
+            latchError(DmiOperation::Write, address, value, status,
+                       rawStatus, targ, 1);
+            return status;
+        }
+        ++diagnostics_.busyReplies;
         if ((uint32_t)(Time::micros() - startedUs) >= DmiBusyTimeoutUs)
+        {
+            latchError(DmiOperation::Write, address, value, DmiStatus::Busy,
+                       rawStatus, targ, 1);
             return DmiStatus::Busy;
+        }
     }
 }
 
@@ -200,7 +257,14 @@ WchLink::DmiStatus Ch32PiocRvswd::readDmi(uint8_t address, uint32_t& value)
     const uint32_t startedUs = Time::micros();
     while (true)
     {
-        if (!runFrame(CtrlRead)) return DmiStatus::Timeout;
+        ++diagnostics_.wireFrames;
+        if (!runFrame(CtrlRead))
+        {
+            ++diagnostics_.engineTimeouts;
+            latchError(DmiOperation::Read, address, 0, DmiStatus::Timeout,
+                       0xff, nullptr, 0);
+            return DmiStatus::Timeout;
+        }
 
         uint8_t targ[R::kFrameBytes] = {};
         targ[0] = R8_DATA_REG11;
@@ -211,15 +275,34 @@ WchLink::DmiStatus Ch32PiocRvswd::readDmi(uint8_t address, uint32_t& value)
 
         const R::ReadReply rep = R::unpackRead(targ);
         const DmiStatus status = mapStatus(rep.status);
+        const uint8_t receivedParity = static_cast<uint8_t>(targ[4] >> 7);
+        const uint8_t expectedParity = R::xorBits(rep.data);
         // Data and parity are undefined while the target reports busy.
         if (status == DmiStatus::Busy)
         {
+            ++diagnostics_.busyReplies;
             if ((uint32_t)(Time::micros() - startedUs) >= DmiBusyTimeoutUs)
+            {
+                latchError(DmiOperation::Read, address, rep.data, DmiStatus::Busy,
+                           rep.status, targ, 5, receivedParity, expectedParity);
                 return DmiStatus::Busy;
+            }
             continue;
         }
-        if (status != DmiStatus::Ok) return status;
-        if (!rep.parityOk) return DmiStatus::Parity;
+        if (status != DmiStatus::Ok)
+        {
+            ++diagnostics_.targetFaults;
+            latchError(DmiOperation::Read, address, rep.data, status,
+                       rep.status, targ, 5, receivedParity, expectedParity);
+            return status;
+        }
+        if (!rep.parityOk)
+        {
+            ++diagnostics_.parityErrors;
+            latchError(DmiOperation::Read, address, rep.data, DmiStatus::Parity,
+                       rep.status, targ, 5, receivedParity, expectedParity);
+            return DmiStatus::Parity;
+        }
         value = rep.data;
         return DmiStatus::Ok;
     }
