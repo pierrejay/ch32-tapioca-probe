@@ -54,6 +54,8 @@ bit    field          value (MSB first)
   padding are not pinned by the WCH-LinkE and the **target ignores them**; the
   firmware always drives the deterministic read-clean pattern (park=1, padding=0x5).
 - `status`: **1 = ok** (every successful access), **3 = busy → retry**, 2 = fail.
+  The probe retries `busy` responses for up to 5 ms before reporting the error to
+  the host; reply data and parity are ignored until the status is `ok`.
 
 The register map matches the standard RISC-V Debug Module (shared with the RVSWIO
 path): `0x04/0x05` data0/1, `0x10` DMCONTROL (`0x80000001` halt / `0x40000000`

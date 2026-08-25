@@ -17,6 +17,11 @@ constexpr uint8_t CtrlRead = 0x01;
 // A wire frame completes in well under 1 ms; this leaves ample target margin
 // while keeping a failed engine far below the host's 5 s command timeout.
 constexpr uint32_t EngineTimeoutUs = 5000;
+// A target may reject a DMI access transiently with status 3. Host backends such
+// as minichlink treat that status as final, so absorb it here as a real LinkE
+// does. DMI acceptance is independent of abstract-command completion (which the
+// host polls separately); 5 ms is therefore a deliberately generous bound.
+constexpr uint32_t DmiBusyTimeoutUs = 5000;
 
 // Inter-frame guard, in microseconds: minimum spacing between the end of one RVSWD
 // frame and the START of the next, on the wire. Measured from the previous frame so
@@ -170,11 +175,18 @@ WchLink::DmiStatus Ch32PiocRvswd::writeDmi(uint8_t address, uint32_t value)
     R8_DATA_REG8 = f.bytes[4];
     R8_DATA_REG9 = f.bytes[5];
 
-    if (!runFrame(0x00)) return DmiStatus::Timeout; // CTRL bit0 clear = write
+    const uint32_t startedUs = Time::micros();
+    while (true)
+    {
+        if (!runFrame(0x00)) return DmiStatus::Timeout; // CTRL bit0 clear = write
 
-    uint8_t targ[R::kFrameBytes] = {};
-    targ[0] = R8_DATA_REG11;
-    return mapStatus(R::unpackWriteStatus(targ));
+        uint8_t targ[R::kFrameBytes] = {};
+        targ[0] = R8_DATA_REG11;
+        const DmiStatus status = mapStatus(R::unpackWriteStatus(targ));
+        if (status != DmiStatus::Busy) return status;
+        if ((uint32_t)(Time::micros() - startedUs) >= DmiBusyTimeoutUs)
+            return DmiStatus::Busy;
+    }
 }
 
 WchLink::DmiStatus Ch32PiocRvswd::readDmi(uint8_t address, uint32_t& value)
@@ -185,19 +197,32 @@ WchLink::DmiStatus Ch32PiocRvswd::readDmi(uint8_t address, uint32_t& value)
     R8_DATA_REG4 = f.bytes[0];
     R8_DATA_REG5 = f.bytes[1];
 
-    if (!runFrame(CtrlRead)) return DmiStatus::Timeout;
+    const uint32_t startedUs = Time::micros();
+    while (true)
+    {
+        if (!runFrame(CtrlRead)) return DmiStatus::Timeout;
 
-    uint8_t targ[R::kFrameBytes] = {};
-    targ[0] = R8_DATA_REG11;
-    targ[1] = R8_DATA_REG12;
-    targ[2] = R8_DATA_REG13;
-    targ[3] = R8_DATA_REG14;
-    targ[4] = R8_DATA_REG15;
+        uint8_t targ[R::kFrameBytes] = {};
+        targ[0] = R8_DATA_REG11;
+        targ[1] = R8_DATA_REG12;
+        targ[2] = R8_DATA_REG13;
+        targ[3] = R8_DATA_REG14;
+        targ[4] = R8_DATA_REG15;
 
-    R::ReadReply rep = R::unpackRead(targ);
-    value = rep.data;
-    if (!rep.parityOk) return DmiStatus::Parity;
-    return mapStatus(rep.status);
+        const R::ReadReply rep = R::unpackRead(targ);
+        const DmiStatus status = mapStatus(rep.status);
+        // Data and parity are undefined while the target reports busy.
+        if (status == DmiStatus::Busy)
+        {
+            if ((uint32_t)(Time::micros() - startedUs) >= DmiBusyTimeoutUs)
+                return DmiStatus::Busy;
+            continue;
+        }
+        if (status != DmiStatus::Ok) return status;
+        if (!rep.parityOk) return DmiStatus::Parity;
+        value = rep.data;
+        return DmiStatus::Ok;
+    }
 }
 
 void Ch32PiocRvswd::disconnect()
