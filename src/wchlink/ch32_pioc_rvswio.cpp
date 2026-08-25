@@ -13,7 +13,9 @@ namespace
 constexpr uint8_t CtrlGo = 0x80;
 constexpr uint8_t CtrlRead = 0x01;
 constexpr uint8_t RwWrite = 0x01;
-constexpr uint32_t EngineTimeoutIterations = 32000000;
+// A wire frame completes in well under 1 ms; this leaves ample target margin
+// while keeping a failed engine far below the host's 5 s command timeout.
+constexpr uint32_t EngineTimeoutUs = 5000;
 
 // Mandatory inter-frame guard (cnlohr: 8 us; "2 us is sometimes too short", else
 // back-to-back DMI ops merge). Measured from the previous frame so the wait overlaps
@@ -93,11 +95,13 @@ bool Ch32PiocRvswio::runFrame(uint8_t command)
     __asm volatile("" ::: "memory");
     R8_DATA_REG0 = static_cast<uint8_t>(command | CtrlGo);
 
-    uint32_t timeout = EngineTimeoutIterations;
+    const uint32_t startedUs = Time::micros();
     // Observe GO consumed first (generation boundary), then STATUS complete.
-    while ((R8_DATA_REG0 & CtrlGo) != 0 && timeout != 0) --timeout;
-    while (R8_DATA_REG1 == 0 && timeout != 0) --timeout;
-    if (timeout != 0)
+    while ((R8_DATA_REG0 & CtrlGo) != 0 &&
+           (uint32_t)(Time::micros() - startedUs) < EngineTimeoutUs) {}
+    while ((R8_DATA_REG0 & CtrlGo) == 0 && R8_DATA_REG1 == 0 &&
+           (uint32_t)(Time::micros() - startedUs) < EngineTimeoutUs) {}
+    if ((R8_DATA_REG0 & CtrlGo) == 0 && R8_DATA_REG1 != 0)
     {
         // Record the frame end; reply on USB without blocking.
 #if RVSWIO_GUARD_US > 0
@@ -125,12 +129,14 @@ bool Ch32PiocRvswio::connect()
     constexpr uint8_t DMSHDWCFGR = 0x7e;
     constexpr uint32_t kCfgUnlock = 0x5aa50000u | (1u << 10); // allow output from slave
 
-    writeDmi(DMSHDWCFGR, kCfgUnlock);
-    writeDmi(DMCFGR, kCfgUnlock);
-    writeDmi(DMSHDWCFGR, kCfgUnlock); // once is sometimes not enough (per minichlink)
-    writeDmi(DMCFGR, kCfgUnlock);
-    writeDmi(DMCONTROL, 0x80000001);
-    writeDmi(DMCONTROL, 0x80000001); // twice, as the proven references do
+    // Protocol-level failures may recover on the repeated init writes. An engine
+    // timeout cannot, so do not multiply it across the rest of the sequence.
+    if (writeDmi(DMSHDWCFGR, kCfgUnlock) == DmiStatus::Timeout) return false;
+    if (writeDmi(DMCFGR, kCfgUnlock) == DmiStatus::Timeout) return false;
+    if (writeDmi(DMSHDWCFGR, kCfgUnlock) == DmiStatus::Timeout) return false;
+    if (writeDmi(DMCFGR, kCfgUnlock) == DmiStatus::Timeout) return false;
+    if (writeDmi(DMCONTROL, 0x80000001) == DmiStatus::Timeout) return false;
+    if (writeDmi(DMCONTROL, 0x80000001) == DmiStatus::Timeout) return false;
 
     uint32_t cfg = 0;
     if (readDmi(DMCFGR, cfg) != WchLink::DmiStatus::Ok) return false;
