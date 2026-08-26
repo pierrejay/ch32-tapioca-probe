@@ -59,8 +59,9 @@ struct DmiDiagnostics
 class IDmi
 {
 public:
-    // Establish a debug session with the target. Returns false if no target
-    // responds. Must be bounded - a missing target never wedges the caller.
+    // Run the transport-specific debug setup. Returns false if the wire engine or
+    // setup transactions fail. The caller validates DMSTATUS and target identity.
+    // Must be bounded - a missing target never wedges the caller.
     virtual bool connect() = 0;
 
     // One DMI register read/write. address is the 7-bit DMI address.

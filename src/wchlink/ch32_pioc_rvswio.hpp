@@ -12,8 +12,9 @@ class Ch32PiocRvswio final : public WchLink::IDmi
 public:
     void init();
 
-    // IDmi. connect() is minimal: the host performs the DMI init sequence
-    // via DMI writes, so this only ensures the PIOC engine is live.
+    // Performs the WCH QingKe debug setup and an end-to-end DMI read. The
+    // returned configuration value is not portable; the auto-port validates
+    // DMSTATUS and the chip identity separately.
     bool connect() override;
     WchLink::DmiStatus readDmi(uint8_t address, uint32_t& value) override;
     WchLink::DmiStatus writeDmi(uint8_t address, uint32_t value) override;

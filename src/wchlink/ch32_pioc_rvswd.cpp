@@ -179,8 +179,9 @@ bool Ch32PiocRvswd::connect()
     if (!engineLoaded_) loadEngine();
 
     // WCH QingKe debug init (same DMI-level sequence as RVSWIO/minichlink): unlock
-    // slave output, make the debug module active, then read DMCFGR back and require
-    // the 0x5aa5 signature. Proves the two-wire read+write path end to end.
+    // slave output, make the debug module active, then read DMCFGR back to exercise
+    // the two-wire read+write path end to end. Its value is not portable: V203
+    // accepts the setup but reads zero. The auto-port validates DMSTATUS instead.
     constexpr uint8_t DMCONTROL = 0x10;
     constexpr uint8_t DMCFGR = 0x7d;
     constexpr uint8_t DMSHDWCFGR = 0x7e;
@@ -197,7 +198,7 @@ bool Ch32PiocRvswd::connect()
 
     uint32_t cfg = 0;
     if (readDmi(DMCFGR, cfg) != DmiStatus::Ok) return false;
-    return (cfg & 0xffff0000u) == 0x5aa50000u;
+    return true;
 }
 
 WchLink::DmiStatus Ch32PiocRvswd::writeDmi(uint8_t address, uint32_t value)

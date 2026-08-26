@@ -148,9 +148,8 @@ bool Ch32PiocRvswio::connect()
 
     // WCH QingKe V2 debug init, matching minichlink's DefaultSetupInterface /
     // InitializeSWDSWIO: unlock slave output, make the debug module active, then
-    // read DMCFGR back and require the 0x5aa5 signature. This doubles as a live
-    // read+write proof of the RVSWIO wire, so a successful connect means the
-    // whole transaction path works. Idempotent if the host also sends these.
+    // read DMCFGR back as a live read+write transaction. Its value is not portable;
+    // the auto-port validates DMSTATUS instead. Idempotent if the host repeats it.
     constexpr uint8_t DMCONTROL = 0x10;
     constexpr uint8_t DMCFGR = 0x7d;
     constexpr uint8_t DMSHDWCFGR = 0x7e;
@@ -167,7 +166,7 @@ bool Ch32PiocRvswio::connect()
 
     uint32_t cfg = 0;
     if (readDmi(DMCFGR, cfg) != WchLink::DmiStatus::Ok) return false;
-    return (cfg & 0xffff0000u) == 0x5aa50000u;
+    return true;
 }
 
 WchLink::DmiStatus Ch32PiocRvswio::writeDmi(uint8_t address, uint32_t value)

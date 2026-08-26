@@ -14,8 +14,9 @@ class Ch32PiocRvswd final : public WchLink::IDmi
 public:
     void init();
 
-    // connect() performs the WCH QingKe debug unlock and verifies the 0x5aa5
-    // signature, doubling as a live read+write proof of the two-wire transport.
+    // Performs the WCH QingKe debug setup and an end-to-end DMI read. The
+    // returned configuration value is not portable; the auto-port validates
+    // DMSTATUS and the chip identity separately.
     bool connect() override;
     WchLink::DmiStatus readDmi(uint8_t address, uint32_t& value) override;
     WchLink::DmiStatus writeDmi(uint8_t address, uint32_t value) override;

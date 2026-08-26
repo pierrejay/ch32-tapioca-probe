@@ -1,19 +1,36 @@
 #include "ch32_wch_autoport.hpp"
+#include "time.hpp"
 
 using WchLink::DmiStatus;
 
 namespace
 {
 constexpr uint8_t kDmStatus = 0x11; // RISC-V Debug Module status register
+constexpr uint32_t kDmStatusAnyHalted = 1u << 8;
+constexpr uint32_t kDmStatusAllHalted = 1u << 9;
+constexpr uint32_t kHaltTimeoutUs = 5000;
 
-// Accept only valid RISC-V debug versions from DMSTATUS.
+// The transport setup issues haltreq. Accept it only after the single target hart
+// reports halted; a readable Debug Module alone is not enough for abstract access.
 bool wireResponds(WchLink::IDmi& port)
 {
-    port.connect(); // best-effort; ignore its strict 0x5aa5 verdict
-    uint32_t status = 0;
-    if (port.readDmi(kDmStatus, status) != DmiStatus::Ok) return false;
-    const uint8_t version = static_cast<uint8_t>(status & 0x0f);
-    return version == 2 || version == 3;
+    if (!port.connect()) return false;
+
+    const uint32_t startedUs = Time::micros();
+    do
+    {
+        uint32_t status = 0;
+        if (port.readDmi(kDmStatus, status) != DmiStatus::Ok) return false;
+
+        const uint8_t version = static_cast<uint8_t>(status & 0x0f);
+        if (version != 2 && version != 3) return false;
+
+        constexpr uint32_t haltedMask = kDmStatusAnyHalted | kDmStatusAllHalted;
+        if ((status & haltedMask) == haltedMask) return true;
+    }
+    while ((uint32_t)(Time::micros() - startedUs) < kHaltTimeoutUs);
+
+    return false;
 }
 }
 
