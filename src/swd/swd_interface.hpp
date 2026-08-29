@@ -25,12 +25,13 @@ public:
     virtual uint8_t transfer(uint8_t request, uint32_t* data) = 0;
 
     // CMSIS-DAP sequences are always packed least-significant bit first.
-    virtual void writeSequence(uint16_t bitCount, const uint8_t* data) = 0;
-    virtual void readSequence(uint16_t bitCount, uint8_t* data) = 0;
+    virtual bool writeSequence(uint16_t bitCount, const uint8_t* data) = 0;
+    virtual bool readSequence(uint16_t bitCount, uint8_t* data) = 0;
 
-    virtual void writePins(uint8_t value, uint8_t select) = 0;
+    virtual bool writePins(uint8_t value, uint8_t select) = 0;
     virtual uint8_t readPins() const = 0;
     virtual bool resetTarget() = 0;
+    virtual void delayUs(uint32_t microseconds) = 0;
 
     // Optional implementation-specific diagnostics. CMSIS-DAP reserves
     // commands 0x80..0x9f for vendor use. Returning zero leaves the command

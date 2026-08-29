@@ -147,6 +147,7 @@ void Ch32PiocSwd::disconnect()
     engineLoaded_ = false;
     configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
     setReset(true);
+    pinState_ |= (1u << PinSwclk) | (1u << PinSwdio) | (1u << PinNreset);
 }
 
 void Ch32PiocSwd::setClockHz(uint32_t frequencyHz)
@@ -211,41 +212,44 @@ uint8_t Ch32PiocSwd::transfer(uint8_t request, uint32_t* data)
     return ack;
 }
 
-void Ch32PiocSwd::writeSequence(uint16_t bitCount, const uint8_t* data)
+bool Ch32PiocSwd::writeSequence(uint16_t bitCount, const uint8_t* data)
 {
-    if (!data) return;
+    if (!data && bitCount != 0) return false;
     for (uint16_t bit = 0; bit < bitCount; ++bit)
     {
         R8_DATA_REG2 = static_cast<uint8_t>((data[bit >> 3u] >> (bit & 7u)) & 1u);
-        if (!runCommand(CtrlSequence)) return;
+        if (!runCommand(CtrlSequence)) return false;
     }
+    return true;
 }
 
-void Ch32PiocSwd::readSequence(uint16_t bitCount, uint8_t* data)
+bool Ch32PiocSwd::readSequence(uint16_t bitCount, uint8_t* data)
 {
-    if (!data) return;
+    if (!data && bitCount != 0) return false;
     const size_t byteCount = (bitCount + 7u) / 8u;
     memset(data, 0, byteCount);
     for (uint16_t bit = 0; bit < bitCount; ++bit)
     {
-        if (!runCommand(CtrlSequence | CtrlRead)) return;
+        if (!runCommand(CtrlSequence | CtrlRead)) return false;
         if ((R8_DATA_REG9 & 1u) != 0) data[bit >> 3u] |= static_cast<uint8_t>(1u << (bit & 7u));
     }
 
     // Reclaim SWDIO as a driven-high output after the final sampled bit.
     R8_DATA_REG2 = 0x03;
-    (void)runCommand(CtrlPins);
+    return runCommand(CtrlPins);
 }
 
-void Ch32PiocSwd::writePins(uint8_t value, uint8_t select)
+bool Ch32PiocSwd::writePins(uint8_t value, uint8_t select)
 {
     pinState_ = static_cast<uint8_t>((pinState_ & ~select) | (value & select));
+    bool success = true;
     if ((select & ((1u << PinSwclk) | (1u << PinSwdio))) != 0)
     {
         R8_DATA_REG2 = static_cast<uint8_t>(pinState_ & 0x03u);
-        (void)runCommand(CtrlPins);
+        success = runCommand(CtrlPins);
     }
     if ((select & (1u << PinNreset)) != 0) setReset((pinState_ & (1u << PinNreset)) != 0);
+    return success;
 }
 
 uint8_t Ch32PiocSwd::readPins() const
@@ -263,6 +267,11 @@ bool Ch32PiocSwd::resetTarget()
     Delay_Ms(10);
     setReset(true);
     return true;
+}
+
+void Ch32PiocSwd::delayUs(uint32_t microseconds)
+{
+    Delay_Us(microseconds);
 }
 
 void Ch32PiocSwd::setReset(bool high)

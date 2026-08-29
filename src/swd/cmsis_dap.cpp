@@ -488,15 +488,14 @@ Result Core::processPacket(ISwd& swd,
         {
             if (requestLength < 6 || responseCapacity < 2) return invalid();
             uint32_t data = read32(request + 2);
-            transferRetry(swd, 0, &data);
-            response[1] = DapOk;
+            response[1] = transferRetry(swd, 0, &data) == ISwd::AckOk ?
+                          DapOk : DapError;
             return {Status::Ok, 2};
         }
 
         case IdDelay:
             if (requestLength < 3 || responseCapacity < 2) return invalid();
-            // The transport does not need microsecond-accurate sleeps for the
-            // OpenOCD flash path; clocking and retries provide target pacing.
+            swd.delayUs(read16(request + 1));
             response[1] = DapOk;
             return {Status::Ok, 2};
 
@@ -508,7 +507,7 @@ Result Core::processPacket(ISwd& swd,
 
         case IdSwjPins:
             if (requestLength < 7 || responseCapacity < 2) return invalid();
-            swd.writePins(request[1], request[2]);
+            if (!swd.writePins(request[1], request[2])) resetConnection(swd);
             response[1] = swd.readPins();
             return {Status::Ok, 2};
 
@@ -524,8 +523,7 @@ Result Core::processPacket(ISwd& swd,
             const uint16_t bits = request[1] == 0 ? 256 : request[1];
             const size_t bytes = (bits + 7u) / 8u;
             if (!room(2, bytes, requestLength)) return invalid();
-            swd.writeSequence(bits, request + 2);
-            response[1] = DapOk;
+            response[1] = swd.writeSequence(bits, request + 2) ? DapOk : DapError;
             return {Status::Ok, 2};
         }
 
@@ -551,13 +549,21 @@ Result Core::processPacket(ISwd& swd,
                 if (info & 0x80u)
                 {
                     if (!room(output, bytes, responseCapacity)) return invalid();
-                    swd.readSequence(bits, response + output);
+                    if (!swd.readSequence(bits, response + output))
+                    {
+                        response[1] = DapError;
+                        return {Status::Ok, output};
+                    }
                     output += bytes;
                 }
                 else
                 {
                     if (!room(input, bytes, requestLength)) return invalid();
-                    swd.writeSequence(bits, request + input);
+                    if (!swd.writeSequence(bits, request + input))
+                    {
+                        response[1] = DapError;
+                        return {Status::Ok, output};
+                    }
                     input += bytes;
                 }
             }

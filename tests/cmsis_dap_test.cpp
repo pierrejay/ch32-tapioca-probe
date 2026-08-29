@@ -27,24 +27,28 @@ public:
         return result;
     }
 
-    void writeSequence(uint16_t bits, const uint8_t* data) override
+    bool writeSequence(uint16_t bits, const uint8_t* data) override
     {
         sequenceBits = bits;
         sequenceFirstByte = data[0];
+        return sequenceOk;
     }
 
-    void readSequence(uint16_t bits, uint8_t* data) override
+    bool readSequence(uint16_t bits, uint8_t* data) override
     {
         sequenceBits = bits;
         memset(data, 0xa5, (bits + 7u) / 8u);
+        return sequenceOk;
     }
 
-    void writePins(uint8_t value, uint8_t select) override
+    bool writePins(uint8_t value, uint8_t select) override
     {
         pins = (uint8_t)((pins & ~select) | (value & select));
+        return pinsOk;
     }
     uint8_t readPins() const override { return pins; }
     bool resetTarget() override { ++resetCount; return true; }
+    void delayUs(uint32_t value) override { delay = value; }
     size_t vendorCommand(const uint8_t* request, size_t requestLength,
                          uint8_t* response, size_t responseCapacity) override
     {
@@ -70,10 +74,13 @@ public:
     uint8_t idle = 0;
     uint8_t pins = 0x80;
     uint8_t ack = AckOk;
+    uint32_t delay = 0;
     unsigned resetCount = 0;
     unsigned vendorCount = 0;
     bool dataPhase = false;
     bool active = false;
+    bool sequenceOk = true;
+    bool pinsOk = true;
 };
 
 int main()
@@ -132,8 +139,26 @@ int main()
 
     {
         const uint8_t rx[] = {0x12, 8, 0x9e};
-        dap.processPacket(swd, rx, sizeof(rx), tx);
+        const auto result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.responseLength == 2 && tx[1] == 0);
         assert(swd.sequenceBits == 8 && swd.sequenceFirstByte == 0x9e);
+    }
+
+    {
+        const uint8_t rx[] = {0x09, 0x34, 0x12};
+        const auto result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.responseLength == 2 && tx[1] == 0);
+        assert(swd.delay == 0x1234);
+    }
+
+    {
+        const uint8_t rx[] = {0x08, 0, 0, 0, 0, 0};
+        swd.ack = ISwd::AckFault;
+        auto result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.responseLength == 2 && tx[1] == 0xff);
+        swd.ack = ISwd::AckOk;
+        result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.responseLength == 2 && tx[1] == 0);
     }
 
     {
@@ -266,6 +291,38 @@ int main()
         const uint8_t rx[] = {0x9f};
         const auto result = dap.processPacket(swd, rx, sizeof(rx), tx);
         assert(result.responseLength == 1 && tx[0] == 0xff);
+    }
+
+    {
+        // Sequence backend failures must be visible in the CMSIS-DAP status.
+        swd.sequenceOk = false;
+        const uint8_t swj[] = {0x12, 8, 0x9e};
+        auto result = dap.processPacket(swd, swj, sizeof(swj), tx);
+        assert(result.responseLength == 2 && tx[1] == 0xff);
+
+        const uint8_t swdWrite[] = {0x1d, 1, 8, 0x5a};
+        result = dap.processPacket(swd, swdWrite, sizeof(swdWrite), tx);
+        assert(result.responseLength == 2 && tx[1] == 0xff);
+
+        const uint8_t swdRead[] = {0x1d, 1, 0x88};
+        result = dap.processPacket(swd, swdRead, sizeof(swdRead), tx);
+        assert(result.responseLength == 2 && tx[1] == 0xff);
+        swd.sequenceOk = true;
+    }
+
+    {
+        // DAP_SWJ_Pins has no status byte. If its backend fails, invalidate the
+        // connection so later target commands cannot continue optimistically.
+        swd.pinsOk = false;
+        const uint8_t rx[] = {0x10, 0x03, 0x03, 0, 0, 0, 0};
+        const auto result = dap.processPacket(swd, rx, sizeof(rx), tx);
+        assert(result.responseLength == 2);
+        assert(!dap.connected() && !swd.active);
+        swd.pinsOk = true;
+
+        const uint8_t connect[] = {0x02, 0x00};
+        dap.processPacket(swd, connect, sizeof(connect), tx);
+        assert(dap.connected() && swd.active);
     }
 
     {

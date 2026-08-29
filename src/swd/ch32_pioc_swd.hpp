@@ -17,11 +17,12 @@ public:
     void setDataPhase(bool enabled) override { dataPhase_ = enabled; }
     void setIdleCycles(uint8_t cycles) override { idleCycles_ = cycles; }
     uint8_t transfer(uint8_t request, uint32_t* data) override;
-    void writeSequence(uint16_t bitCount, const uint8_t* data) override;
-    void readSequence(uint16_t bitCount, uint8_t* data) override;
-    void writePins(uint8_t value, uint8_t select) override;
+    bool writeSequence(uint16_t bitCount, const uint8_t* data) override;
+    bool readSequence(uint16_t bitCount, uint8_t* data) override;
+    bool writePins(uint8_t value, uint8_t select) override;
     uint8_t readPins() const override;
     bool resetTarget() override;
+    void delayUs(uint32_t microseconds) override;
     size_t vendorCommand(const uint8_t* request, size_t requestLength,
                          uint8_t* response, size_t responseCapacity) override;
 
