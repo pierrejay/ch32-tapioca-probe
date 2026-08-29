@@ -33,7 +33,7 @@ jobs:
         with:
           submodules: true
       - name: Install host dependencies
-        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev pkg-config
       - name: Install the validated WCH toolchain
         run: git clone --depth 1 --branch 8.2.0 https://github.com/Community-PIO-CH32V/toolchain-riscv-linux.git sdk/toolchain
       - name: Build release firmwares
