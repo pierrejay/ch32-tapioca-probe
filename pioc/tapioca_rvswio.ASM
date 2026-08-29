@@ -203,9 +203,7 @@ READ_BIT_SAMPLE:    MOVA1F 0X0F                      ; IO1 output
                     CALL  TUNIT                      ; low ~1*TUNIT
                     MOVA1F 0X0D                      ; release IO1 -> input + pull-up
                     CALL  TUNIT                      ; settle ~1*TUNIT -> sample ~2*TUNIT after the edge
-                    BS    SFR_PORT_IO,SB_PORT_OUT0   ; DIAG: PC18 pulses high at the exact sample instant
                     BCTC  BI_PORT_IN1                ; C = line level (1 released, 0 held low)
-                    BC    SFR_PORT_IO,SB_PORT_OUT0
                     RET
 
 ; Bounded wait until the target releases the line high; returns on timeout too so
@@ -222,7 +220,7 @@ WH_CHECK:           MOV   WHCNT,A
                     RET
 
 ; Nominal timing unit. HIL-validated at ~310 ns/unit (10 NOPs at 48 MHz) for
-; emission; the read sample point is 3*TUNIT after each falling edge. Single knob.
+; emission; the read sample point follows two TUNIT intervals. Single knob.
 TUNIT:              NOP
                     NOP
                     NOP

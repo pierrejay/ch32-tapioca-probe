@@ -90,7 +90,10 @@ void Ch32PiocRvswio::loadEngine()
     static_assert(sizeof(program) <= 4096, "PIOC program exceeds reserved SRAM");
 
     R8_SYS_CFG = 0;
-    configureOutput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    // RVSWIO owns only PC19. Keep PC18 floating so one-wire transactions cannot
+    // clock a target connected through the probe's two-wire pinout.
+    configureInput(GPIOC, GPIO_Pin_18);
+    configureOutput(GPIOC, GPIO_Pin_19);
     memcpy(reinterpret_cast<void*>(PIOC_SRAM_BASE), program, sizeof(program));
 
     R8_DATA_REG0 = 0; // CTRL
@@ -99,7 +102,7 @@ void Ch32PiocRvswio::loadEngine()
     R32_DATA_REG4_7 = 0;
 
     R8_SYS_CFG = RB_MST_RESET;
-    R8_SYS_CFG = RB_MST_IO_EN0 | RB_MST_IO_EN1;
+    R8_SYS_CFG = RB_MST_IO_EN1;
     R8_SYS_CFG |= RB_MST_CLK_GATE;
     // Give the eMCU time to initialise its pads and reach WAIT_GO.
     Delay_Ms(1);
