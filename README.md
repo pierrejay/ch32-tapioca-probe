@@ -24,8 +24,8 @@ A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVS
 |---|---|---|---|
 | ARM | JTAG | STM32H523, STM32G431 | openFPGALoader, OpenOCD |
 | ARM | SWD (CMSIS-DAP) | STM32H523, STM32G431 | OpenOCD, probe-rs |
-| CH32 | RVSWIO (1-wire) | CH32V003, CH32H417 | minichlink |
-| CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink |
+| CH32 | RVSWIO (1-wire) | CH32V003, CH32H417 | minichlink, probe-rs |
+| CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink, probe-rs |
 
 The reference board's LED on `PA2` flickers while the probe is talking to a
 target.
@@ -75,9 +75,16 @@ JTAG and SWD share PC18/PC19 (SWJ-DP):
 
 ### Product 2: WCH-Link, RVSWIO & RVSWD  (USB `1a86:8010`)
 
-A WCH-LinkE-compatible probe for CH32 RISC-V, driven by **stock minichlink**.
+A WCH-LinkE-compatible probe for CH32 RISC-V, driven by **stock minichlink** or
+**probe-rs 0.32+** where its target support is available.
 
 The probe implements the WCH-Link *direct-DMI* passthrough only: the **host owns the flash algorithm**, the probe just runs the wire transactions. That is simple and enough for most flashing (which is why `minichlink` drives it), but it is not a full WCH-LinkE: tools that rely on the flash-programming logic built into a real probe are untested and likely won't work as-is.
+
+probe-rs works through this direct-DMI path and has been exercised on all targets
+listed above. Support still depends on the target definitions and flash algorithms
+available upstream, so less mature targets may retain host-side quirks; for example,
+regular H417 flashing works, while full-chip erase awaits an upstream flash-algorithm
+fix.
 
 - **RVSWIO**: single-wire, for the small parts (CH32V003…).
 - **RVSWD**: two-wire, for the larger parts (CH32V307, CH32V203, CH32X035…).
@@ -96,7 +103,7 @@ One data line, plus a clock for the 2-wire parts:
 
 - Some MCUs (e.g. CH32V003 1-wire and CH32X035 2-wire) drive SWDIO open-drain and need an external **~4.7–10 kΩ pull-up** to 3.3 V. Others (like CH32V203/V307) work without one; a default pull-up on the probe's PC19 makes it universal.
 
-- On the same direct-DMI `minichlink` it flashes ~15 % faster than a genuine WCH-LinkE R0-1v3 and reads ~30 % faster (CH32V203, 32 KB payload). Insignificant in practice, and likely not true against newer probes using the vendor toolchain, but a good sign that the PIOC approach holds up. It has only been exercised with `minichlink` (not other WCH-Link host tools), and there is plenty of headroom left to optimise on the USB link and flashing process.
+- On the same direct-DMI `minichlink` it flashes ~15 % faster than a genuine WCH-LinkE R0-1v3 and reads ~30 % faster (CH32V203, 32 KB payload). Insignificant in practice, and likely not true against newer probes using the vendor toolchain, but a good sign that the PIOC approach holds up. These performance figures are specific to `minichlink`; there is still plenty of headroom to optimise the USB link and flashing process.
 
 - Some older `minichlink` builds don't drive direct-DMI. `make minichlink` builds
   the pinned version directly from the ch32fun submodule.
