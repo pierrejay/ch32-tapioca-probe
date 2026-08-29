@@ -216,8 +216,8 @@ SAMPLE3:            CLR   BYTE
                     CALL  ZSHIFT
                     RET
 
-; ---- half SWCLK period: the single timing knob. Start conservative; tighten at
-; HIL. No minimum clock, so slow is always safe and < 5 ms host timeout.
+; ---- half SWCLK period: the single timing knob. This conservative value is
+; HIL-validated on the tested targets and completes a frame below the 5 ms timeout.
 HALF:               NOP
                     NOP
                     NOP

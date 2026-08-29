@@ -19,7 +19,7 @@ Fabrication files (Gerber, BOM, CPL) can be trivially generated from the EasyEDA
 - activity LED on `PA2`;
 - 5.1 kOhm pull-up on `DIO`;
 - ESD protection on the USB and target-facing debug lines;
-- two alternative 2.54mm target-connector footprints.
+- two alternative through-hole target-connector footprints.
 
 The four-pin connector exposes the signals shared by ARM SWD and the WCH
 single-/two-wire transports. The firmware also implements four-wire JTAG, but this

@@ -2,7 +2,7 @@
 
 Two build-time USB debug-probe firmwares for CH32X035:
 
-1. **JTAG + ARM SWD**: a homemade DirtyJTAG v2 & CMSIS-DAP v2 probe. Both share one firmware, the probe auto-switches mode based on which host tool connects (no reflash or rewiring).
+1. **JTAG + ARM SWD**: a homemade DirtyJTAG v2 & CMSIS-DAP v2 probe. Both share one firmware, and the first target command claims the shared wire (no reflash or rewiring).
 2. **WCH-Link**: a WCH-LinkE-like probe for CH32 RISC-V, both single-wire **RVSWIO** and two-wire **RVSWD**, driven by stock `minichlink`. Auto-detects RVSWIO vs RVSWD per target.
 
 It reuses the proven PIOC primitives from the sibling [**Tapioca**](https://github.com/pierrejay/ch32-tapioca) project.
@@ -42,7 +42,7 @@ One firmware provides two USB interfaces, mutually exclusive on the shared wire:
 
 - **DirtyJTAG v2** (interface 0): JTAG debug for openFPGALoader / urjtag / OpenOCD.
 - **CMSIS-DAP v2** (interface 1): ARM SWD flash/debug, ST-Link-style, for OpenOCD / probe-rs.
-- **Seamless switch**: the host picks the mode by *which interface it opens*; the probe arbitrates ownership of the shared PC18/PC19 wire. A stale owner (client exited) is auto-preempted after ~1 s idle, so switching JTAG ↔ SWD needs no reflash, rewire or manual release.
+- **Seamless switch**: `DAP_Connect` claims SWD and the first DirtyJTAG target packet claims JTAG; the probe arbitrates ownership of the shared PC18/PC19 wire. A stale owner (client exited) is auto-preempted after ~1 s idle, so switching JTAG ↔ SWD needs no reflash, rewire or manual release.
 
 #### Pinout
 
@@ -66,6 +66,10 @@ JTAG and SWD share PC18/PC19 (SWJ-DP):
 - Full run-control debugging with SWD, not just flashing. RTT also works (host-side: `OpenOCD rtt` or `defmt`/`probe-rs`...): plain target-memory access over the debug link without trace pin.
 
 - There is no SWO/ITM trace yet (no `DAP_SWO_*` commands), so `printf`-over-SWO and instruction trace aren't available.
+
+- The CMSIS-DAP implementation is the SWD subset exercised by OpenOCD and
+  probe-rs. Transfer value matching and the optional SWJ pin-wait behavior are
+  not implemented; unsupported features are not advertised as probe capabilities.
 
 - Example OpenOCD configs for driving a target through the probe are in [`openocd/`](openocd/) (e.g. `stm32g431-pioc-swd.cfg`).
 

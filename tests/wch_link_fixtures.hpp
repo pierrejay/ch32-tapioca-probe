@@ -27,7 +27,7 @@ struct Fixture
     const char*   name;
     const uint8_t* request;
     uint8_t        requestLen;
-    const uint8_t* reply;      // canonical reply the probe should emit.
+    const uint8_t* reply;      // exact only when contract is ExactBytes.
     uint8_t        replyLen;
     ReplyContract  contract;
 };

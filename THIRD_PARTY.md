@@ -34,8 +34,9 @@ The following are **protocol specifications**, not vendor code — this reposito
 
 ### CMSIS-DAP v2 (Arm)
 - Spec: <https://github.com/ARM-software/CMSIS-DAP>
-- [`src/swd/`](src/swd/) implements the CMSIS-DAP v2 command set (the ARM ADIv5 SWD transport).
-  The code is written for this project; only the wire protocol is shared.
+- [`src/swd/`](src/swd/) implements the CMSIS-DAP v2 SWD subset used by OpenOCD
+  and probe-rs. The code is written for this project; only the wire protocol is
+  shared.
 
 ### WCH-Link direct-DMI, RVSWIO & RVSWD
 

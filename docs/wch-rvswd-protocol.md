@@ -117,11 +117,11 @@ parity, and maps status → `DmiStatus`.
 
 ## Timing
 
-There is no minimum clock (like MDIO), so a slow `SWCLK` is always safe and well
-under the 5 ms host timeout. The sample point is the `SWCLK` HIGH phase —
-deterministic, with no pulse-width classification (the RVSWIO read hazard does not
-exist here). Between frames the transport enforces a short inter-frame guard
-(deferred so it costs no host-visible latency; see `Ch32PiocRvswd::runFrame`).
+The current conservative half-period completes a frame well under the 5 ms engine
+timeout and is HIL-validated on the tested RVSWD targets. The sample point is the
+`SWCLK` HIGH phase, with no pulse-width classification. Between frames the
+transport enforces a short inter-frame guard (deferred so it costs no host-visible
+latency; see `Ch32PiocRvswd::runFrame`).
 
 ## References
 
