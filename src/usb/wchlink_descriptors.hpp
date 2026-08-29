@@ -24,7 +24,7 @@ constexpr uint8_t device[] =
 {
     0x12, 0x01,             // bLength, DEVICE
     0x10, 0x01,             // USB 1.10
-    0xFF, 0x00, 0x00,       // vendor class; minichlink drives the bulk interface
+    0x00, 0x00, 0x00,       // class is defined by the vendor-specific interface
     kEp0Size,
     (uint8_t)kVid, (uint8_t)(kVid >> 8),
     (uint8_t)kPid, (uint8_t)(kPid >> 8),
