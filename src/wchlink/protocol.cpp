@@ -125,7 +125,7 @@ Result buildDiagnostics(IDmi& port, uint8_t* tx)
     writeU32(tx + 27, diagnostics.busyReplies);
     writeU32(tx + 31, diagnostics.targetFaults);
     writeU32(tx + 35, diagnostics.parityErrors);
-    writeU32(tx + 39, diagnostics.engineTimeouts);
+    writeU32(tx + 39, diagnostics.timeouts);
     return {kDiagnosticsReplyLen, Status::Ok};
 }
 

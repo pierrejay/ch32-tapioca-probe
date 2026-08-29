@@ -22,11 +22,15 @@
 ;
 ; Mailbox (STATUS published last; GO/STATUS generation boundary as in the SWD engine):
 ;   REG0  CTRL     bit7 GO, bit0 READ (0 = write, 1 = read)
-;   REG1  STATUS   0 busy, 1 complete
+;   REG1  STATUS   0 busy, 1 complete, 2 wire-release timeout
+; On status 2, IO1 remains released as an input. The CPU must stop and reload
+; the engine before issuing another GO.
 ;   REG2  HEAD     (address<<1)|rw, emitted MSB first (bit7=a6 .. bit1=a0, bit0=rw)
 ;   REG4  DATA0    d7..d0     REG5 DATA1 d15..d8    REG6 DATA2 d23..d16   REG7 DATA3 d31..d24
 ;   REG12 BYTE     scratch: byte being shifted out (write) or accumulated (read)
 ;   REG13 WHCNT    scratch: WAIT_HIGH bounded-timeout counter
+;   REG14 WIREERR  scratch: bit0 set when SWIO stays low
+;   REG15 LASTBYTE scratch: bit0 set while reading the final data byte
 ;==============================================================================
 
 INCLUDE             pioc_sfr.inc
@@ -45,6 +49,8 @@ DATA2               EQU   SFR_DATA_REG6
 DATA3               EQU   SFR_DATA_REG7
 BYTE                EQU   SFR_DATA_REG12
 WHCNT               EQU   SFR_DATA_REG13
+WIREERR             EQU   SFR_DATA_REG14
+LASTBYTE            EQU   SFR_DATA_REG15
 
 MCU_START:
                     CLR   SFR_PORT_DIR
@@ -56,6 +62,8 @@ WAIT_GO:            BTSS  CTRL,7
                     JMP   WAIT_GO
                     BC    CTRL,7
                     CLR   STATUS
+                    CLR   WIREERR
+                    CLR   LASTBYTE
 
                     ; start bit + address/rw are common to read and write
                     CALL  EMIT1                      ; start bit = 1
@@ -84,15 +92,24 @@ WRITE_FRAME:        MOV   DATA3,A
 
 ; ---- READ: sample 32 bits MSB first into DATA3..DATA0 -----------------------
 READ_FRAME:         CALL  READ_BYTE                 ; d31..d24
+                    BTSC  WIREERR,0
+                    JMP   PUBLISH_WIRE_TIMEOUT
                     MOV   BYTE,A
                     MOVA  DATA3
                     CALL  READ_BYTE                 ; d23..d16
+                    BTSC  WIREERR,0
+                    JMP   PUBLISH_WIRE_TIMEOUT
                     MOV   BYTE,A
                     MOVA  DATA2
                     CALL  READ_BYTE                 ; d15..d8
+                    BTSC  WIREERR,0
+                    JMP   PUBLISH_WIRE_TIMEOUT
                     MOV   BYTE,A
                     MOVA  DATA1
+                    BS    LASTBYTE,0
                     CALL  READ_BYTE                 ; d7..d0
+                    BTSC  WIREERR,0
+                    JMP   PUBLISH_WIRE_TIMEOUT
                     MOV   BYTE,A
                     MOVA  DATA0
                     MOVA1F 0X0F                     ; re-drive output
@@ -100,6 +117,13 @@ READ_FRAME:         CALL  READ_BYTE                 ; d31..d24
                     JMP   PUBLISH_DONE
 
 PUBLISH_DONE:       MOVL  0X01
+                    MOVA  STATUS
+                    JMP   WAIT_GO
+
+PUBLISH_WIRE_TIMEOUT:
+                    ; Preserve the released input state; runFrame() tears the
+                    ; engine down and the next operation restarts at MCU_START.
+                    MOVL  0X02
                     MOVA  STATUS
                     JMP   WAIT_GO
 
@@ -171,27 +195,45 @@ READ_BYTE:          CLR   BYTE
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    BTSC  WIREERR,0
+                    RET
                     CALL  READ_BIT_SAMPLE
                     RCL   BYTE,1
                     CALL  WAIT_HIGH
+                    ; Only the final frame bit may ignore a release timeout: its
+                    ; value is already sampled and no following edge exists.
+                    BTSC  LASTBYTE,0
+                    BC    WIREERR,0
                     RET
 
 ; Drive the falling edge, release the wire, wait, sample the level into C.
@@ -217,6 +259,8 @@ WH_CHECK:           MOV   WHCNT,A
                     ADDL  0XFF
                     MOVA  WHCNT
                     JNZ   WH_LOOP
+                    MOVL  0X01
+                    MOVA  WIREERR
                     RET
 
 ; Nominal timing unit. HIL-validated at ~310 ns/unit (10 NOPs at 48 MHz) for

@@ -50,7 +50,7 @@ struct DmiDiagnostics
     uint32_t busyReplies = 0;
     uint32_t targetFaults = 0;
     uint32_t parityErrors = 0;
-    uint32_t engineTimeouts = 0;
+    uint32_t timeouts = 0;
 };
 
 // Hardware-independent WCH RISC-V Debug Module Interface port. The USB command

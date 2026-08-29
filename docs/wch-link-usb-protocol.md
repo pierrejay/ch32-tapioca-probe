@@ -99,7 +99,8 @@ start a new target session.
 
 - `81 7f 01 00` returns a versioned 43-byte snapshot: selected transport
   (RVSWD/RVSWIO), first latched wire error and raw reply, plus frame, busy, target
-  fault, parity-error and engine-timeout counters.
+  fault, parity-error and timeout counters. RVSWIO reports a PIOC mailbox timeout
+  with raw status `0xff`, and a wire-release timeout with raw status `0x02`.
 - `81 7f 01 01` clears both transport snapshots.
 - A successful target attach clears prior evidence. The first subsequent error is
   latched while counters continue, including through normal session cleanup.

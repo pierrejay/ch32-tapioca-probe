@@ -219,7 +219,7 @@ WchLink::DmiStatus Ch32PiocRvswd::writeDmi(uint8_t address, uint32_t value)
         ++diagnostics_.wireFrames;
         if (!runFrame(0x00))
         {
-            ++diagnostics_.engineTimeouts;
+            ++diagnostics_.timeouts;
             latchError(DmiOperation::Write, address, value, DmiStatus::Timeout,
                        0xff, nullptr, 0);
             return DmiStatus::Timeout;
@@ -261,7 +261,7 @@ WchLink::DmiStatus Ch32PiocRvswd::readDmi(uint8_t address, uint32_t& value)
         ++diagnostics_.wireFrames;
         if (!runFrame(CtrlRead))
         {
-            ++diagnostics_.engineTimeouts;
+            ++diagnostics_.timeouts;
             latchError(DmiOperation::Read, address, 0, DmiStatus::Timeout,
                        0xff, nullptr, 0);
             return DmiStatus::Timeout;

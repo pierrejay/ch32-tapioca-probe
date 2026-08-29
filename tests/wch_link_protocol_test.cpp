@@ -267,7 +267,7 @@ int main()
         port.diagnostics.busyReplies = 5;
         port.diagnostics.targetFaults = 6;
         port.diagnostics.parityErrors = 7;
-        port.diagnostics.engineTimeouts = 8;
+        port.diagnostics.timeouts = 8;
 
         WchLink::Core core;
         const uint8_t query[] = {0x81, 0x7f, 0x01, 0x00};
@@ -282,6 +282,7 @@ int main()
         assert(memcmp(tx + 14, raw, sizeof(raw)) == 0);
         assert(tx[19] == 0x12 && tx[20] == 0x34 && tx[21] == 0x56 && tx[22] == 0x78);
         assert(tx[23] == 0x01 && tx[24] == 0x02 && tx[25] == 0x03 && tx[26] == 0x04);
+        assert(tx[39] == 0 && tx[40] == 0 && tx[41] == 0 && tx[42] == 8);
         assert(port.readCalls == 0 && port.writeCalls == 0 && port.connectCalls == 0);
 
         const uint8_t clear[] = {0x81, 0x7f, 0x01, 0x01};

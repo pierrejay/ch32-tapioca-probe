@@ -35,7 +35,7 @@ static const char *status_name(uint8_t status)
 {
     switch (status) {
     case 0: return "ok";
-    case 1: return "engine-timeout";
+    case 1: return "timeout";
     case 2: return "parity";
     case 3: return "busy-timeout";
     case 4: return "target-fault";

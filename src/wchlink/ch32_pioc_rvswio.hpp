@@ -24,9 +24,10 @@ public:
 
 private:
     void loadEngine();
-    bool runFrame(uint8_t command);
-    void latchTimeout(WchLink::DmiOperation operation, uint8_t address,
-                      uint32_t data);
+    uint8_t runFrame(uint8_t command);
+    void latchError(WchLink::DmiOperation operation, uint8_t address,
+                    uint32_t data, WchLink::DmiStatus status,
+                    uint8_t rawStatus);
 
     bool engineLoaded_ = false;
     // The next frame waits only for the margin not consumed since this timestamp.

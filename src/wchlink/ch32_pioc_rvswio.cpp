@@ -13,6 +13,8 @@ namespace
 constexpr uint8_t CtrlGo = 0x80;
 constexpr uint8_t CtrlRead = 0x01;
 constexpr uint8_t RwWrite = 0x01;
+constexpr uint8_t FrameComplete = 0x01;
+constexpr uint8_t FrameWireTimeout = 0x02;
 // A wire frame completes in well under 1 ms; this leaves ample target margin
 // while keeping a failed engine far below the host's 5 s command timeout.
 constexpr uint32_t EngineTimeoutUs = 5000;
@@ -69,16 +71,17 @@ void Ch32PiocRvswio::clearDiagnostics()
     diagnostics_.transport = WchLink::DmiTransport::Rvswio;
 }
 
-void Ch32PiocRvswio::latchTimeout(WchLink::DmiOperation operation,
-                                  uint8_t address, uint32_t data)
+void Ch32PiocRvswio::latchError(WchLink::DmiOperation operation,
+                                uint8_t address, uint32_t data,
+                                DmiStatus status, uint8_t rawStatus)
 {
-    ++diagnostics_.engineTimeouts;
+    if (status == DmiStatus::Timeout) ++diagnostics_.timeouts;
     if (diagnostics_.valid) return;
     diagnostics_.valid = true;
     diagnostics_.operation = operation;
     diagnostics_.address = address;
-    diagnostics_.status = DmiStatus::Timeout;
-    diagnostics_.rawStatus = 0xff;
+    diagnostics_.status = status;
+    diagnostics_.rawStatus = rawStatus;
     diagnostics_.data = data;
 }
 
@@ -109,7 +112,7 @@ void Ch32PiocRvswio::loadEngine()
     engineLoaded_ = true;
 }
 
-bool Ch32PiocRvswio::runFrame(uint8_t command)
+uint8_t Ch32PiocRvswio::runFrame(uint8_t command)
 {
     // Honour the spacing from the previous frame while allowing USB turnaround to
     // consume it. Elapsed-time arithmetic also treats long-idle timestamps safely.
@@ -132,16 +135,29 @@ bool Ch32PiocRvswio::runFrame(uint8_t command)
            (uint32_t)(Time::micros() - startedUs) < EngineTimeoutUs) {}
     if ((R8_DATA_REG0 & CtrlGo) == 0 && R8_DATA_REG1 != 0)
     {
-        // Record the frame end; reply on USB without blocking.
+        const uint8_t frameStatus = R8_DATA_REG1;
+        if (frameStatus != FrameComplete)
+        {
+            // A failed read can leave SWIO released as an input. Tear the engine
+            // down so no later frame can reuse that state; the next operation
+            // starts from MCU_START after loadEngine().
+            R8_SYS_CFG = 0;
+            engineLoaded_ = false;
+            configureInput(GPIOC, GPIO_Pin_19);
+            return frameStatus;
+        }
+
+        // Record the successful frame end; reply on USB without blocking.
 #if RVSWIO_GUARD_US > 0
         lastFrameEndUs_ = Time::micros();
 #endif
-        return true;
+        return frameStatus;
     }
 
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    return false;
+    configureInput(GPIOC, GPIO_Pin_19);
+    return 0;
 }
 
 bool Ch32PiocRvswio::connect()
@@ -178,9 +194,13 @@ WchLink::DmiStatus Ch32PiocRvswio::writeDmi(uint8_t address, uint32_t value)
     R8_DATA_REG2 = static_cast<uint8_t>((address << 1) | RwWrite);
     R32_DATA_REG4_7 = value;
     ++diagnostics_.wireFrames;
-    if (runFrame(0x00)) return DmiStatus::Ok;
-    latchTimeout(WchLink::DmiOperation::Write, address, value);
-    return DmiStatus::Timeout;
+    const uint8_t frameStatus = runFrame(0x00);
+    if (frameStatus == FrameComplete) return DmiStatus::Ok;
+    const DmiStatus status = frameStatus == 0 || frameStatus == FrameWireTimeout ?
+                             DmiStatus::Timeout : DmiStatus::ProtocolFault;
+    latchError(WchLink::DmiOperation::Write, address, value, status,
+               frameStatus == 0 ? 0xff : frameStatus);
+    return status;
 }
 
 WchLink::DmiStatus Ch32PiocRvswio::readDmi(uint8_t address, uint32_t& value)
@@ -188,10 +208,14 @@ WchLink::DmiStatus Ch32PiocRvswio::readDmi(uint8_t address, uint32_t& value)
     if (!engineLoaded_) loadEngine();
     R8_DATA_REG2 = static_cast<uint8_t>((address << 1)); // rw = 0
     ++diagnostics_.wireFrames;
-    if (!runFrame(CtrlRead))
+    const uint8_t frameStatus = runFrame(CtrlRead);
+    if (frameStatus != FrameComplete)
     {
-        latchTimeout(WchLink::DmiOperation::Read, address, 0);
-        return DmiStatus::Timeout;
+        const DmiStatus status = frameStatus == 0 || frameStatus == FrameWireTimeout ?
+                                 DmiStatus::Timeout : DmiStatus::ProtocolFault;
+        latchError(WchLink::DmiOperation::Read, address, 0, status,
+                   frameStatus == 0 ? 0xff : frameStatus);
+        return status;
     }
     value = R32_DATA_REG4_7;
     return DmiStatus::Ok;
