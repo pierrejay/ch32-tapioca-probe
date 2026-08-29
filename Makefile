@@ -47,6 +47,7 @@ OBJCOPY := $(RISCV_PREFIX)-objcopy
 SIZE := $(RISCV_PREFIX)-size
 HOST_CXX ?= c++
 HOST_CC ?= cc
+HOST_CXXFLAGS ?= -std=c++17 -Wall -Wextra
 PYTHON ?= python3
 WCHISP ?= wchisp
 EXTRA_CPPFLAGS ?=
@@ -211,25 +212,40 @@ $(WCHLINK_DIAG): sdk/wchlink_diag.c
 
 HOST_TESTS := packet_order_test pioc_swd_protocol_test wch_rvswd_frame_test \
 	wch_link_fixtures_test cmsis_dap_test protocol_test wch_link_protocol_test
+HOST_TEST_BINS := $(addprefix $(BUILD_ROOT)/tests/,$(HOST_TESTS))
+HOST_TEST_OBJECTS := \
+	$(addprefix $(BUILD_ROOT)/tests/obj/tests/,$(addsuffix .o,$(HOST_TESTS))) \
+	$(BUILD_ROOT)/tests/obj/src/swd/cmsis_dap.o \
+	$(BUILD_ROOT)/tests/obj/src/dirtyjtag/protocol.o \
+	$(BUILD_ROOT)/tests/obj/src/wchlink/protocol.o
+HOST_TEST_DEPS := $(HOST_TEST_OBJECTS:.o=.d)
 
-test: $(addprefix $(BUILD_ROOT)/tests/,$(HOST_TESTS))
+test: $(HOST_TEST_BINS)
 	@for test_bin in $^; do $$test_bin || exit; done
 
-$(BUILD_ROOT)/tests/packet_order_test: tests/packet_order_test.cpp
-$(BUILD_ROOT)/tests/pioc_swd_protocol_test: tests/pioc_swd_protocol_test.cpp
-$(BUILD_ROOT)/tests/wch_rvswd_frame_test: tests/wch_rvswd_frame_test.cpp
-$(BUILD_ROOT)/tests/wch_link_fixtures_test: tests/wch_link_fixtures_test.cpp
-$(BUILD_ROOT)/tests/cmsis_dap_test: tests/cmsis_dap_test.cpp src/swd/cmsis_dap.cpp
-$(BUILD_ROOT)/tests/protocol_test: tests/protocol_test.cpp src/dirtyjtag/protocol.cpp
-$(BUILD_ROOT)/tests/wch_link_protocol_test: tests/wch_link_protocol_test.cpp src/wchlink/protocol.cpp
+$(BUILD_ROOT)/tests/packet_order_test: $(BUILD_ROOT)/tests/obj/tests/packet_order_test.o
+$(BUILD_ROOT)/tests/pioc_swd_protocol_test: $(BUILD_ROOT)/tests/obj/tests/pioc_swd_protocol_test.o
+$(BUILD_ROOT)/tests/wch_rvswd_frame_test: $(BUILD_ROOT)/tests/obj/tests/wch_rvswd_frame_test.o
+$(BUILD_ROOT)/tests/wch_link_fixtures_test: $(BUILD_ROOT)/tests/obj/tests/wch_link_fixtures_test.o
+$(BUILD_ROOT)/tests/cmsis_dap_test: $(BUILD_ROOT)/tests/obj/tests/cmsis_dap_test.o \
+	$(BUILD_ROOT)/tests/obj/src/swd/cmsis_dap.o
+$(BUILD_ROOT)/tests/protocol_test: $(BUILD_ROOT)/tests/obj/tests/protocol_test.o \
+	$(BUILD_ROOT)/tests/obj/src/dirtyjtag/protocol.o
+$(BUILD_ROOT)/tests/wch_link_protocol_test: $(BUILD_ROOT)/tests/obj/tests/wch_link_protocol_test.o \
+	$(BUILD_ROOT)/tests/obj/src/wchlink/protocol.o
 
-$(BUILD_ROOT)/tests/%:
+$(HOST_TEST_BINS):
 	@mkdir -p $(@D)
-	$(HOST_CXX) -std=c++17 -Wall -Wextra -Isrc -Itests $^ -o $@
+	$(HOST_CXX) $(HOST_CXXFLAGS) $^ -o $@
+
+$(BUILD_ROOT)/tests/obj/%.o: %.cpp
+	@mkdir -p $(@D)
+	$(HOST_CXX) $(HOST_CXXFLAGS) -MMD -MP -MF $(@:.o=.d) -Isrc -Itests \
+		-c $< -o $@
 
 clean:
 	rm -rf $(BUILD_ROOT)
 
 distclean: clean
 
--include $(DEPS)
+-include $(DEPS) $(HOST_TEST_DEPS)
