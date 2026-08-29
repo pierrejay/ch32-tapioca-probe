@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Host tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify generated PIOC programs
+        run: make verify-pioc
+      - name: Run native tests
+        run: make test
+      - name: Run native tests with sanitizers
+        run: |
+          make clean
+          make test HOST_CXXFLAGS="-std=c++17 -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer"
+
+  firmware:
+    name: Firmware and host tools (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Install host dependencies
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev
+      - name: Install the validated WCH toolchain
+        run: git clone --depth 1 --branch 8.2.0 https://github.com/Community-PIO-CH32V/toolchain-riscv-linux.git sdk/toolchain
+      - name: Build release firmwares
+        run: make all
+      - name: Build alternate board firmwares
+        run: make BOARD=weact jtagswd wchlink
+      - name: Build WCH diagnostic profiles
+        run: make wchlink-rvswio wchlink-rvswio-emit wchlink-rvswd wchlink-rvswd-emit
+      - name: Build the WCH diagnostic reader
+        run: make wchlink-diag
