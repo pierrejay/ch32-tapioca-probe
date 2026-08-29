@@ -1,5 +1,6 @@
 #include "ch32_pioc_swd.hpp"
 #include "pioc_swd_protocol.hpp"
+#include "time.hpp"
 
 extern "C" {
 #include <string.h>
@@ -18,7 +19,9 @@ constexpr uint8_t CtrlIdle = 0x08;
 constexpr uint8_t CtrlDataPhase = 0x10;
 constexpr uint8_t CtrlGo = 0x80;
 
-constexpr uint32_t EngineTimeoutIterations = 32000000;
+// A complete SWD command is far below 1 ms at the fixed 1 MHz wire clock.
+// Use elapsed time rather than a compiler-dependent instruction-loop budget.
+constexpr uint32_t EngineTimeoutUs = 5000;
 constexpr uint8_t FixedHalfPeriodNops = 16;
 constexpr uint32_t FixedClockHz = 1000000;
 
@@ -116,13 +119,15 @@ bool Ch32PiocSwd::runCommand(uint8_t command)
     __asm volatile("" ::: "memory");
     R8_DATA_REG0 = static_cast<uint8_t>(command | CtrlGo);
 
-    uint32_t timeout = EngineTimeoutIterations;
+    const uint32_t startedUs = Time::micros();
     // First observe GO being consumed. This is an explicit command/response
     // generation boundary and prevents a stale STATUS from satisfying a new
     // transaction even across the CPU/PIOC clock-domain synchronizer.
-    while ((R8_DATA_REG0 & CtrlGo) != 0 && timeout != 0) --timeout;
-    while (R8_DATA_REG1 == 0 && timeout != 0) --timeout;
-    if (timeout != 0) return true;
+    while ((R8_DATA_REG0 & CtrlGo) != 0 &&
+           (uint32_t)(Time::micros() - startedUs) < EngineTimeoutUs) {}
+    while ((R8_DATA_REG0 & CtrlGo) == 0 && R8_DATA_REG1 == 0 &&
+           (uint32_t)(Time::micros() - startedUs) < EngineTimeoutUs) {}
+    if ((R8_DATA_REG0 & CtrlGo) == 0 && R8_DATA_REG1 != 0) return true;
 
     ++statistics_.mailboxTimeouts;
     R8_SYS_CFG = 0;
