@@ -68,8 +68,6 @@ int main()
             // Our packed read must reproduce the host-driven [0:14) bits exactly
             // (reads are deterministic: padding 0x5, park 1 - 59/59 in the capture).
             R::HostFrame f = R::packRead(g.addr);
-            assert(f.hostBits == R::kReadHostBits);
-            assert(f.targBits == R::kReadTargBits);
             for (int i = 0; i < R::kReadHostBits; ++i)
                 assert(R::getBit(f.bytes, i) == R::getBit(full, i));
 
@@ -86,8 +84,6 @@ int main()
             // Writes: park/padding are target-ignored and the WCH-LinkE drives them
             // non-canonically, so compare only the deterministic fields.
             R::HostFrame f = R::packWrite(g.addr, g.data);
-            assert(f.hostBits == R::kWriteHostBits);
-            assert(f.targBits == R::kWriteTargBits);
             assert(R::getField(f.bytes, 0, 7) == g.addr);   // addr
             assert(R::getBit(f.bytes, 7) == 1);             // op = write
             assert(R::getBit(f.bytes, 8) == R::getBit(full, 8)); // parity_host

@@ -5,8 +5,8 @@
 // Pure, hardware-independent codec for the WCH RVSWD (two-wire) 52-bit DMI frame.
 // Kept free of any CH32 SDK dependency so it is unit-testable natively against the
 // real WCH-LinkE -> CH32V307 capture (see tests/wch_rvswd_frame_test.cpp and
-// docs/wch-rvswd-protocol.md). The PIOC engine is a dumb shift register: C++ owns
-// all framing, parity and packing; the blob only clocks HostBits out and TargBits in.
+// docs/wch-rvswd-protocol.md). C++ owns framing, parity and packing; the PIOC blob
+// executes one of two fixed read/write sequences selected by CTRL bit 0.
 //
 // Frame bits are numbered 0..51 and transmitted MSB-first (bit 0 first):
 //   0..6   addr (a6..a0)      7   DM register
@@ -30,9 +30,7 @@ namespace Rvswd
 
 constexpr int kFrameBits = 52;
 constexpr int kReadHostBits = 14;
-constexpr int kReadTargBits = 38;
 constexpr int kWriteHostBits = 48;
-constexpr int kWriteTargBits = 4;
 constexpr int kFrameBytes = 7; // 56-bit capacity holds the 52-bit frame
 
 // Even parity (XOR of all set bits) of the low bits of v.
@@ -74,8 +72,6 @@ inline uint32_t getField(const uint8_t* buf, int pos, int width)
 struct HostFrame
 {
     uint8_t bytes[kFrameBytes]; // frame bit n at bytes[n/8], MSB-first
-    uint8_t hostBits;           // bits the blob drives before turnaround
-    uint8_t targBits;           // bits the blob samples after turnaround
 };
 
 inline uint8_t parityHost(uint8_t addr, uint8_t op)
@@ -100,8 +96,6 @@ inline HostFrame packWrite(uint8_t addr, uint32_t data)
     f.bytes[4] = static_cast<uint8_t>((data >> 6) & 0xffu);                    // data[13:6]
     f.bytes[5] = static_cast<uint8_t>(((data & 0x3fu) << 2) | (pd << 1) | 1u); // data[5:0],pd,park
     f.bytes[6] = 0;
-    f.hostBits = kWriteHostBits;
-    f.targBits = kWriteTargBits;
     return f;
 }
 
@@ -116,13 +110,11 @@ inline HostFrame packRead(uint8_t addr)
     f.bytes[4] = 0;
     f.bytes[5] = 0;
     f.bytes[6] = 0;
-    f.hostBits = kReadHostBits;
-    f.targBits = kReadTargBits;
     return f;
 }
 
-// Target reply. `targ` holds the sampled bits MSB-first from the turnaround point:
-// targ bit j == frame bit (hostBits + j).
+// Target reply. `targ` holds the sampled bits MSB-first from the fixed read
+// turnaround point: targ bit j == frame bit (kReadHostBits + j).
 struct ReadReply
 {
     uint32_t data;

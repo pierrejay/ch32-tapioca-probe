@@ -74,30 +74,29 @@ frame per access**, so the long frame is not part of the direct-DMI path. Layout
 kept for reference: `addr-host[0:7] · data-host[7:39] · op[39:41] · parity[41:42] ·
 addr-target[42:49] · data-target[49:81] · status[81:83] · parity[83:84]`.
 
-## PIOC engine — parameterized shift register
+## PIOC engine — fixed read/write sequences
 
 The blob (`pioc/tapioca_rvswd.ASM`) clocks PC18/OUT0 and drives or samples PC19
-with `BS`/`BC`, `RCL` and `BCTC`. All framing, parity and packing live in C++
-(`rvswd_frame.hpp` / `Ch32PiocRvswd`); the blob only:
+with `BS`/`BC`, `RCL` and `BCTC`. C++ (`rvswd_frame.hpp` /
+`Ch32PiocRvswd`) prepares and decodes the frame bytes. The blob contains two
+fixed sequences selected by `CTRL.READ`:
 
 1. Wait for `CTRL` GO (bit7). Mark `STATUS` busy.
 2. Enable `SWCLK`/`SWDIO` (latch high before setting DIR to avoid a startup glitch).
 3. Emit **START** (drop `SWDIO` while `SWCLK` high).
-4. Clock out **`HOSTBITS`** bits from the host mailbox bytes, MSB first (fall-first
-   cadence). `HOSTBITS` is a mailbox byte, not hardcoded.
-5. **Turnaround**: release `SWDIO` (DIR1→input), advance one clock.
-6. Clock in **`TARGBITS`** bits into the target mailbox bytes, sampling on `SWCLK`
-   high.
-7. Re-drive `SWDIO`, emit **STOP**, idle both lines high.
-8. Publish target bytes, then `STATUS` = complete **last** (generation boundary).
+4. For a read, clock 14 host bits then sample target bits 14..50. For a write,
+   clock 48 host bits then sample target bits 48..50.
+5. Re-drive `SWDIO`, drive the final padding bit 51 as zero, emit **STOP**, and
+   leave both lines high. The final target padding bit is intentionally not sampled.
+6. Publish target bytes, then `STATUS` = complete **last** (generation boundary).
 
-Because `HOSTBITS`/`TARGBITS` come from the mailbox, one blob serves both directions.
-The C++ side pins them to fixed, validated constants — no per-op tuning:
+The turnaround points and sampled lengths are encoded in the PIOC program, not
+supplied by the C++ mailbox:
 
-| Direction | HOSTBITS | TARGBITS | Turnaround |
-|---|---|---|---|
-| READ  | 14 | 38 | after host bit 13 (before `data`) |
-| WRITE | 48 |  4 | after host bit 47 (before `status`) |
+| Direction | Host-driven | Target-sampled | Final bit driven by probe | Turnaround |
+|---|---|---|---|---|
+| READ  | 14 bits | 37 bits | bit 51 padding = 0 | after host bit 13 (before `data`) |
+| WRITE | 48 bits | 3 bits | bit 51 padding = 0 | after host bit 47 (before `status`) |
 
 The frame geometry is constant, so `rvswd_frame.hpp` builds the host bytes directly
 with shifts/masks (the per-op hot path — no bit-by-bit assembly) and unpacks the
@@ -111,11 +110,10 @@ parity, and maps status → `DmiStatus`.
 | Reg | Name | Meaning |
 |---|---|---|
 | REG0  | CTRL     | bit7 GO, bit0 READ (0=write, 1=read; op packed by C++) |
-| REG1  | STATUS   | 0 busy, 1 complete, 0x80 protocol fault (no target / bad turnaround) |
-| REG2  | HOSTBITS | number of bits to clock out before turnaround |
-| REG3  | TARGBITS | number of bits to sample after turnaround |
-| REG4..REG10  | HOST0..6 | host payload, MSB of HOST0 shifted out first (52 bits → 7 bytes) |
-| REG11..REG17 | TARG0..6 | target payload, first sampled bit → MSB of TARG0 |
+| REG1  | STATUS   | 0 busy, 1 complete |
+| REG4..REG9  | HOST0..5 | host payload, MSB of HOST0 shifted out first |
+| REG10 | BYTE | PIOC shift scratch register |
+| REG11..REG15 | TARG0..4 | sampled target payload, first sample → MSB of TARG0 |
 
 ## Timing
 
