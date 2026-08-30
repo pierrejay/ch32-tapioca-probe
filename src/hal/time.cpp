@@ -48,18 +48,29 @@ uint32_t millis()
 
 uint32_t micros()
 {
-    // TIM2 counts 0..999 at 1 MHz and rolls the ms counter on overflow. Read the
-    // ms counter on both sides of the CNT read; if it ticked over, re-read CNT
-    // against the new ms so the two halves are consistent.
-    uint32_t m1 = g_millis;
-    uint32_t cnt = TIM2->CNT;
-    uint32_t m2 = g_millis;
-    if (m1 != m2)
+    for (;;)
     {
-        cnt = TIM2->CNT;
-        m1  = m2;
+        const uint32_t before = g_millis;
+        uint32_t counter = TIM2->CNT;
+        const bool updatePending = (TIM2->INTFR & TIM_UIF) != 0;
+        const uint32_t after = g_millis;
+
+        // The ISR ran while the split counter was sampled. Retry with two
+        // values belonging to the same millisecond.
+        if (before != after) continue;
+
+        if (updatePending)
+        {
+            // TIM2 already wrapped, but its ISR may not have incremented
+            // g_millis yet. Re-read CNT on the new side of the rollover. If
+            // the ISR catches up meanwhile, retry instead of counting twice.
+            counter = TIM2->CNT;
+            if (g_millis != before) continue;
+            return (before + 1u) * 1000u + counter;
+        }
+
+        return before * 1000u + counter;
     }
-    return m1 * 1000u + cnt;
 }
 
 } // namespace Time
