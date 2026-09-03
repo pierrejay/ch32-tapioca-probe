@@ -30,6 +30,8 @@ constexpr uint8_t parity32(uint32_t value)
 
 constexpr bool validAck(uint8_t ack)
 {
-    return ack == 1u || ack == 2u || ack == 4u;
+    // 0b111 is the wire-level "no target response" value. CMSIS-DAP
+    // distinguishes it from bit 3, which reports a protocol error.
+    return ack == 1u || ack == 2u || ack == 4u || ack == 7u;
 }
 }

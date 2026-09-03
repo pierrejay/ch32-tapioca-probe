@@ -1,7 +1,6 @@
-#include "usb_dirtyjtag.hpp"
-#include "dirtyjtag_descriptors.hpp"
+#include "usb_cmsis_dap.hpp"
+#include "cmsis_dap_descriptors.hpp"
 #include "usb_serial.hpp"
-#include "packet_order.hpp"
 #include "time.hpp"
 #ifdef UART_BRIDGE
 #include "uart_bridge.hpp"
@@ -16,8 +15,6 @@ extern "C" {
 #define UEP0    0x00
 #define UEP1    0x01
 #define UEP2    0x02
-#define UEP3    0x03
-#define UEP4    0x04
 #ifdef UART_BRIDGE
 #define UEP5    0x05
 #define UEP6    0x06
@@ -26,7 +23,7 @@ extern "C" {
 
 #define UDM_PUE_MASK 0x00000003
 
-namespace Desc = DirtyJtagUsbDescriptors;
+namespace Desc = CmsisDapUsbDescriptors;
 
 namespace
 {
@@ -66,9 +63,7 @@ constexpr uint8_t CDC_SET_CONTROL_LINE_STATE = 0x22;
 #endif
 
 constexpr uint8_t USBFS_UEP1_RX_EN = RB_UEP1_RX_EN;
-constexpr uint8_t USBFS_UEP4_RX_EN = RB_UEP4_RX_EN;
 constexpr uint8_t USBFS_UEP2_TX_EN = RB_UEP2_TX_EN;
-constexpr uint8_t USBFS_UEP3_TX_EN = RB_UEP3_TX_EN;
 #ifdef UART_BRIDGE
 // CH32X035 R8_UEP567_MOD bit layout (it differs from other WCH USBFS IPs).
 constexpr uint8_t USBFS_UEP5_TX_EN = 1u << 0;
@@ -88,18 +83,17 @@ constexpr uint8_t USBFS_UIS_ENDP_MASK = MASK_UIS_ENDP;
 constexpr uint8_t USBFS_UIS_TOG_OK = RB_UIS_TOG_OK;
 }
 
-UsbDirtyJtag* UsbDirtyJtag::self_ = nullptr;
+UsbCmsisDap* UsbCmsisDap::self_ = nullptr;
 
-void UsbDirtyJtag::endpointInit()
+void UsbCmsisDap::endpointInit()
 {
-    USBFSD->UEP4_1_MOD = USBFS_UEP1_RX_EN | USBFS_UEP4_RX_EN;
-    USBFSD->UEP2_3_MOD = USBFS_UEP2_TX_EN | USBFS_UEP3_TX_EN;
+    USBFSD->UEP4_1_MOD = USBFS_UEP1_RX_EN;
+    USBFSD->UEP2_3_MOD = USBFS_UEP2_TX_EN;
     USBFSD->UEP567_MOD = 0;
 
     USBFSD->UEP0_DMA = (uint32_t)ep0_;
     USBFSD->UEP1_DMA = (uint32_t)ep1Out_;
     USBFSD->UEP2_DMA = (uint32_t)ep2In_;
-    USBFSD->UEP3_DMA = (uint32_t)ep3In_;
 #ifdef UART_BRIDGE
     if (uart_)
     {
@@ -112,18 +106,14 @@ void UsbDirtyJtag::endpointInit()
 #endif
 
     USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
-    resetDirtyJtagEndpoints(true, true);
     resetCmsisDapEndpoints(true, true);
 #ifdef UART_BRIDGE
     if (uart_) resetCdcEndpoints(true, true);
 #endif
-    arrivalCounter_ = 0;
-    dirtyJtagArrival_ = 0;
-    cmsisDapArrival_ = 0;
 }
 
 #ifdef UART_BRIDGE
-void UsbDirtyJtag::resetCdcEndpoints(bool resetOutToggle, bool resetInToggle)
+void UsbCmsisDap::resetCdcEndpoints(bool resetOutToggle, bool resetInToggle)
 {
     uint16_t outToggle = USBFSD->UEP6_CTRL_H & USBFS_UEP_R_TOG;
     uint16_t inToggle = USBFSD->UEP7_CTRL_H & USBFS_UEP_T_TOG;
@@ -145,7 +135,7 @@ void UsbDirtyJtag::resetCdcEndpoints(bool resetOutToggle, bool resetInToggle)
     cdcStopPending_ = false;
 }
 
-bool UsbDirtyJtag::queueCdcInFromIrq()
+bool UsbCmsisDap::queueCdcInFromIrq()
 {
     if (!uart_ || !configured_ || !cdcSessionOpen_ || controlOutStatusPending_ ||
         cdcInBusy_)
@@ -166,7 +156,7 @@ bool UsbDirtyJtag::queueCdcInFromIrq()
     return true;
 }
 
-void UsbDirtyJtag::releaseControlOutBarrier()
+void UsbCmsisDap::releaseControlOutBarrier()
 {
     if (!controlOutStatusPending_) return;
 
@@ -174,10 +164,6 @@ void UsbDirtyJtag::releaseControlOutBarrier()
     if (txBusy_)
         USBFSD->UEP2_CTRL_H =
             (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-            USBFS_UEP_T_RES_ACK;
-    if (dapTxBusy_)
-        USBFSD->UEP3_CTRL_H =
-            (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
             USBFS_UEP_T_RES_ACK;
     if (cdcInBusy_)
         USBFSD->UEP7_CTRL_H =
@@ -187,7 +173,7 @@ void UsbDirtyJtag::releaseControlOutBarrier()
 
 #endif
 
-void UsbDirtyJtag::resetDirtyJtagEndpoints(bool resetOutToggle, bool resetInToggle)
+void UsbCmsisDap::resetCmsisDapEndpoints(bool resetOutToggle, bool resetInToggle)
 {
     uint16_t outToggle = USBFSD->UEP1_CTRL_H & USBFS_UEP_R_TOG;
     uint16_t inToggle = USBFSD->UEP2_CTRL_H & USBFS_UEP_T_TOG;
@@ -204,24 +190,7 @@ void UsbDirtyJtag::resetDirtyJtagEndpoints(bool resetOutToggle, bool resetInTogg
     txStartedMs_ = 0;
 }
 
-void UsbDirtyJtag::resetCmsisDapEndpoints(bool resetOutToggle, bool resetInToggle)
-{
-    uint16_t outToggle = USBFSD->UEP4_CTRL_H & USBFS_UEP_R_TOG;
-    uint16_t inToggle = USBFSD->UEP3_CTRL_H & USBFS_UEP_T_TOG;
-    if (resetOutToggle) outToggle = 0;
-    if (resetInToggle) inToggle = 0;
-
-    USBFSD->UEP3_TX_LEN = 0;
-    USBFSD->UEP4_CTRL_H = outToggle | USBFS_UEP_R_RES_ACK;
-    USBFSD->UEP3_CTRL_H = inToggle | USBFS_UEP_T_RES_NAK;
-    dapPendingLength_ = 0;
-    dapPacketPending_ = false;
-    dapPacketTaken_ = false;
-    dapTxBusy_ = false;
-    dapTxStartedMs_ = 0;
-}
-
-void UsbDirtyJtag::init(UartBridge* uart)
+void UsbCmsisDap::init(UartBridge* uart)
 {
     self_ = this;
 #ifdef UART_BRIDGE
@@ -231,8 +200,7 @@ void UsbDirtyJtag::init(UartBridge* uart)
     (void)uart;
     uart_ = nullptr;
 #endif
-    dirtyJtagResetPending_ = false;
-    cmsisDapResetPending_ = false;
+    sessionResetPending_ = false;
 
     RCC->APB2PCENR |= RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOC;
     RCC->AHBPCENR |= RCC_AHBPeriph_USBFS;
@@ -256,7 +224,7 @@ void UsbDirtyJtag::init(UartBridge* uart)
     NVIC_EnableIRQ(USBFS_IRQn);
 }
 
-bool UsbDirtyJtag::pollCdc()
+bool UsbCmsisDap::pollCdc()
 {
 #ifndef UART_BRIDGE
     return false;
@@ -300,7 +268,7 @@ bool UsbDirtyJtag::pollCdc()
 }
 
 #ifdef UART_BRIDGE
-void UsbDirtyJtag::requestUartRxDrain()
+void UsbCmsisDap::requestUartRxDrain()
 {
     if (!uart_ || !configured_ || !cdcSessionOpen_ || cdcStopPending_ ||
         cdcInBusy_ || uartRxDrainPending_ || (sleepStatus_ & 0x02))
@@ -311,66 +279,41 @@ void UsbDirtyJtag::requestUartRxDrain()
 }
 #endif
 
-void UsbDirtyJtag::armOut()
+void UsbCmsisDap::armOut()
 {
     USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_R_RES_MASK) |
                           USBFS_UEP_R_RES_ACK;
 }
 
-void UsbDirtyJtag::armCmsisDapOut()
-{
-    USBFSD->UEP4_CTRL_H = (USBFSD->UEP4_CTRL_H & ~USBFS_UEP_R_RES_MASK) |
-                          USBFS_UEP_R_RES_ACK;
-}
-
-bool UsbDirtyJtag::takeNextPacket(uint8_t* destination, size_t& length, bool& cmsisDap)
+bool UsbCmsisDap::takeNextPacket(uint8_t* destination, size_t& length)
 {
     bool available = false;
     NVIC_DisableIRQ(USBFS_IRQn);
-    const bool dirtyAvailable = packetPending_ && !packetTaken_;
-    const bool dapAvailable = dapPacketPending_ && !dapPacketTaken_;
-    const bool dapFirst = dapAvailable &&
-        (!dirtyAvailable || packetArrivedBefore(cmsisDapArrival_, dirtyJtagArrival_));
-
-    if (dapFirst)
-    {
-        length = dapPendingLength_;
-        memcpy(destination, ep0_ + kPacketSize, length);
-        dapPacketTaken_ = true;
-        cmsisDap = true;
-        available = true;
-    }
-    else if (dirtyAvailable)
+    if (packetPending_ && !packetTaken_)
     {
         length = pendingLength_;
         memcpy(destination, ep1Out_, length);
         packetTaken_ = true;
-        cmsisDap = false;
         available = true;
     }
     NVIC_EnableIRQ(USBFS_IRQn);
     return available;
 }
 
-bool UsbDirtyJtag::takeSessionReset(bool& dirtyJtag, bool& cmsisDap)
+bool UsbCmsisDap::takeSessionReset()
 {
     NVIC_DisableIRQ(USBFS_IRQn);
     const uint32_t now = Time::millis();
-    dirtyJtag = dirtyJtagResetPending_ ||
+    const bool reset = sessionResetPending_ ||
         (txBusy_ &&
          (uint32_t)(now - txStartedMs_) >= kAbandonedReplyTimeoutMs);
-    cmsisDap = cmsisDapResetPending_ ||
-        (dapTxBusy_ &&
-         (uint32_t)(now - dapTxStartedMs_) >= kAbandonedReplyTimeoutMs);
-    dirtyJtagResetPending_ = false;
-    cmsisDapResetPending_ = false;
-    if (dirtyJtag) resetDirtyJtagEndpoints(false, false);
-    if (cmsisDap) resetCmsisDapEndpoints(false, false);
+    sessionResetPending_ = false;
+    if (reset) resetCmsisDapEndpoints(false, false);
     NVIC_EnableIRQ(USBFS_IRQn);
-    return dirtyJtag || cmsisDap;
+    return reset;
 }
 
-bool UsbDirtyJtag::finish(const uint8_t* response, size_t length)
+bool UsbCmsisDap::finish(const uint8_t* response, size_t length)
 {
     if (length > kPacketSize) return false;
 
@@ -404,41 +347,7 @@ bool UsbDirtyJtag::finish(const uint8_t* response, size_t length)
     return accepted;
 }
 
-bool UsbDirtyJtag::finishCmsisDap(const uint8_t* response, size_t length)
-{
-    if (length > kPacketSize) return false;
-
-    bool accepted = false;
-    NVIC_DisableIRQ(USBFS_IRQn);
-    if (dapPacketPending_ && dapPacketTaken_ && !dapTxBusy_)
-    {
-        dapPacketPending_ = false;
-        dapPacketTaken_ = false;
-        dapPendingLength_ = 0;
-
-        if (length != 0)
-        {
-            memcpy(ep3In_, response, length);
-            USBFSD->UEP3_TX_LEN = (uint16_t)length;
-#ifdef UART_BRIDGE
-            if (!controlOutStatusPending_)
-#endif
-                USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                                      USBFS_UEP_T_RES_ACK;
-            dapTxBusy_ = true;
-            dapTxStartedMs_ = Time::millis();
-        }
-        else
-        {
-            armCmsisDapOut();
-        }
-        accepted = true;
-    }
-    NVIC_EnableIRQ(USBFS_IRQn);
-    return accepted;
-}
-
-void UsbDirtyJtag::handleSetup()
+void UsbCmsisDap::handleSetup()
 {
 #ifdef UART_BRIDGE
     // A new SETUP aborts any previous control transfer, including a missing
@@ -556,8 +465,8 @@ void UsbDirtyJtag::handleSetup()
                 switch ((uint8_t)(setupValue_ >> 8))
                 {
                     case USB_DESCR_TYP_DEVICE:
-                        descriptorCursor_ = Desc::device;
-                        length = Desc::device[0];
+                        descriptorCursor_ = uart_ ? Desc::deviceWithUart : Desc::device;
+                        length = descriptorCursor_[0];
                         break;
                     case USB_DESCR_TYP_CONFIG:
                         descriptorCursor_ = uart_ ? Desc::configurationWithUart
@@ -605,7 +514,6 @@ void UsbDirtyJtag::handleSetup()
                 }
                 deviceConfiguration_ = (uint8_t)setupValue_;
                 configured_ = deviceConfiguration_ != 0;
-                resetDirtyJtagEndpoints(true, true);
                 resetCmsisDapEndpoints(true, true);
 #ifdef UART_BRIDGE
                 if (uart_)
@@ -616,8 +524,7 @@ void UsbDirtyJtag::handleSetup()
                     else uart_->stop();
                 }
 #endif
-                dirtyJtagResetPending_ = true;
-                cmsisDapResetPending_ = true;
+                sessionResetPending_ = true;
                 break;
 
             case USB_GET_INTERFACE:
@@ -633,13 +540,8 @@ void UsbDirtyJtag::handleSetup()
                 }
                 if (setupIndex_ == 0)
                 {
-                    resetDirtyJtagEndpoints(true, true);
-                    dirtyJtagResetPending_ = true;
-                }
-                else if (setupIndex_ == 1)
-                {
                     resetCmsisDapEndpoints(true, true);
-                    cmsisDapResetPending_ = true;
+                    sessionResetPending_ = true;
                 }
 #ifdef UART_BRIDGE
                 else if (uart_ &&
@@ -667,20 +569,12 @@ void UsbDirtyJtag::handleSetup()
                     switch (setupIndex_)
                     {
                         case (UEP_OUT | UEP1):
-                            resetDirtyJtagEndpoints(true, false);
-                            dirtyJtagResetPending_ = true;
+                            resetCmsisDapEndpoints(true, false);
+                            sessionResetPending_ = true;
                             break;
                         case (UEP_IN | UEP2):
-                            resetDirtyJtagEndpoints(false, true);
-                            dirtyJtagResetPending_ = true;
-                            break;
-                        case (UEP_OUT | UEP4):
-                            resetCmsisDapEndpoints(true, false);
-                            cmsisDapResetPending_ = true;
-                            break;
-                        case (UEP_IN | UEP3):
                             resetCmsisDapEndpoints(false, true);
-                            cmsisDapResetPending_ = true;
+                            sessionResetPending_ = true;
                             break;
 #ifdef UART_BRIDGE
                         case (UEP_IN | UEP5):
@@ -745,7 +639,7 @@ void UsbDirtyJtag::handleSetup()
 }
 
 #ifdef UART_BRIDGE
-void UsbDirtyJtag::handleEp0Out()
+void UsbCmsisDap::handleEp0Out()
 {
     if (!cdcLineCodingPending_) return;
 
@@ -764,8 +658,6 @@ void UsbDirtyJtag::handleEp0Out()
     controlOutStatusPending_ = true;
     USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                           USBFS_UEP_T_RES_NAK;
-    USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                          USBFS_UEP_T_RES_NAK;
     USBFSD->UEP7_CTRL_H = (USBFSD->UEP7_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
                           USBFS_UEP_T_RES_NAK;
     USBFSD->UEP0_TX_LEN = 0;
@@ -774,7 +666,7 @@ void UsbDirtyJtag::handleEp0Out()
 }
 #endif
 
-void UsbDirtyJtag::handleEp0In()
+void UsbCmsisDap::handleEp0In()
 {
 #ifdef UART_BRIDGE
     releaseControlOutBarrier();
@@ -801,7 +693,7 @@ void UsbDirtyJtag::handleEp0In()
     }
 }
 
-void UsbDirtyJtag::busReset()
+void UsbCmsisDap::busReset()
 {
     configured_ = false;
     deviceConfiguration_ = 0;
@@ -815,11 +707,10 @@ void UsbDirtyJtag::busReset()
 #endif
     USBFSD->DEV_ADDR = 0;
     endpointInit();
-    dirtyJtagResetPending_ = true;
-    cmsisDapResetPending_ = true;
+    sessionResetPending_ = true;
 }
 
-void UsbDirtyJtag::onIrq()
+void UsbCmsisDap::onIrq()
 {
     const uint8_t flags = USBFSD->INT_FG;
     const uint8_t status = USBFSD->INT_ST;
@@ -842,15 +733,6 @@ void UsbDirtyJtag::onIrq()
                     txStartedMs_ = 0;
                     armOut();
                 }
-                else if ((status & USBFS_UIS_ENDP_MASK) == UEP3)
-                {
-                    USBFSD->UEP3_CTRL_H ^= USBFS_UEP_T_TOG;
-                    USBFSD->UEP3_CTRL_H = (USBFSD->UEP3_CTRL_H & ~USBFS_UEP_T_RES_MASK) |
-                                          USBFS_UEP_T_RES_NAK;
-                    dapTxBusy_ = false;
-                    dapTxStartedMs_ = 0;
-                    armCmsisDapOut();
-                }
 #ifdef UART_BRIDGE
                 else if (uart_ && (status & USBFS_UIS_ENDP_MASK) == UEP7)
                 {
@@ -859,8 +741,8 @@ void UsbDirtyJtag::onIrq()
                                           USBFS_UEP_T_RES_NAK;
                     cdcInBusy_ = false;
                     cdcActivityPending_ = true;
-                    // Keep CDC IN flowing while main services DirtyJTAG or
-                    // CMSIS-DAP. The periodic tick seeds a new idle chain.
+                    // Keep CDC IN flowing while main services CMSIS-DAP. The
+                    // periodic tick seeds a new idle chain.
                     queueCdcInFromIrq();
                 }
 #endif
@@ -882,20 +764,8 @@ void UsbDirtyJtag::onIrq()
                     USBFSD->UEP1_CTRL_H = (USBFSD->UEP1_CTRL_H & ~USBFS_UEP_R_RES_MASK) |
                                           USBFS_UEP_R_RES_NAK;
                     pendingLength_ = (uint8_t)USBFSD->RX_LEN;
-                    dirtyJtagArrival_ = ++arrivalCounter_;
                     packetPending_ = true;
                     packetTaken_ = false;
-                }
-                else if ((status & USBFS_UIS_ENDP_MASK) == UEP4 &&
-                         (status & USBFS_UIS_TOG_OK))
-                {
-                    USBFSD->UEP4_CTRL_H ^= USBFS_UEP_R_TOG;
-                    USBFSD->UEP4_CTRL_H = (USBFSD->UEP4_CTRL_H & ~USBFS_UEP_R_RES_MASK) |
-                                          USBFS_UEP_R_RES_NAK;
-                    dapPendingLength_ = (uint8_t)USBFSD->RX_LEN;
-                    cmsisDapArrival_ = ++arrivalCounter_;
-                    dapPacketPending_ = true;
-                    dapPacketTaken_ = false;
                 }
 #ifdef UART_BRIDGE
                 else if (uart_ && (status & USBFS_UIS_ENDP_MASK) == UEP6 &&
@@ -930,8 +800,7 @@ void UsbDirtyJtag::onIrq()
         if (USBFSD->MIS_ST & USBFS_UMS_SUSPEND)
         {
             sleepStatus_ |= 0x02;
-            dirtyJtagResetPending_ = true;
-            cmsisDapResetPending_ = true;
+            sessionResetPending_ = true;
 #ifdef UART_BRIDGE
             if (uart_)
             {
@@ -967,5 +836,5 @@ void UsbDirtyJtag::onIrq()
 extern "C" void USBFS_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 extern "C" void USBFS_IRQHandler(void)
 {
-    UsbDirtyJtag::handleIrq();
+    UsbCmsisDap::handleIrq();
 }

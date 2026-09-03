@@ -1,5 +1,6 @@
 #include "ch32_pioc_rvswio.hpp"
 
+#include "hal/ch32_gpio.hpp"
 #include "time.hpp"
 
 extern "C" {
@@ -27,23 +28,6 @@ constexpr uint32_t EngineTimeoutUs = 5000;
 #define RVSWIO_GUARD_US 8
 #endif
 
-void configureOutput(GPIO_TypeDef* port, uint32_t pin,
-                     GPIO_CFGLR_PIN_MODE_Typedef mode = GPIO_CFGLR_OUT_10Mhz_AF_PP)
-{
-    for (uint32_t bit = 0; bit < 24; ++bit)
-    {
-        if ((pin & (1u << bit)) == 0) continue;
-        volatile uint32_t* cfg = bit < 8 ? &port->CFGLR :
-                                 bit < 16 ? &port->CFGHR : &port->CFGXR;
-        const uint32_t shift = (bit & 7u) * 4u;
-        *cfg = (*cfg & ~(0xfu << shift)) | (static_cast<uint32_t>(mode) << shift);
-    }
-}
-
-void configureInput(GPIO_TypeDef* port, uint32_t pin)
-{
-    configureOutput(port, pin, GPIO_CFGLR_IN_FLOAT);
-}
 }
 
 void Ch32PiocRvswio::init()
@@ -56,7 +40,7 @@ void Ch32PiocRvswio::init()
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
     // Park the wire as a floating input until a transaction is requested.
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
 }
 
 bool Ch32PiocRvswio::getDiagnostics(WchLink::DmiDiagnostics& diagnostics) const
@@ -95,8 +79,8 @@ void Ch32PiocRvswio::loadEngine()
     R8_SYS_CFG = 0;
     // RVSWIO owns only PC19. Keep PC18 floating so one-wire transactions cannot
     // clock a target connected through the probe's two-wire pinout.
-    configureInput(GPIOC, GPIO_Pin_18);
-    configureOutput(GPIOC, GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18);
+    Ch32Gpio::configure(GPIOC, GPIO_Pin_19, GPIO_CFGLR_OUT_10Mhz_AF_PP);
     memcpy(reinterpret_cast<void*>(PIOC_SRAM_BASE), program, sizeof(program));
 
     R8_DATA_REG0 = 0; // CTRL
@@ -143,7 +127,7 @@ uint8_t Ch32PiocRvswio::runFrame(uint8_t command)
             // starts from MCU_START after loadEngine().
             R8_SYS_CFG = 0;
             engineLoaded_ = false;
-            configureInput(GPIOC, GPIO_Pin_19);
+            Ch32Gpio::floatPins(GPIOC, GPIO_Pin_19);
             return frameStatus;
         }
 
@@ -156,7 +140,7 @@ uint8_t Ch32PiocRvswio::runFrame(uint8_t command)
 
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    configureInput(GPIOC, GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_19);
     return 0;
 }
 
@@ -225,5 +209,5 @@ void Ch32PiocRvswio::disconnect()
 {
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
 }

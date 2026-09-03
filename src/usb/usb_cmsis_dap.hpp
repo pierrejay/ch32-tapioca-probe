@@ -7,12 +7,10 @@
 
 class UartBridge;
 
-// Interrupt-driven CH32X035 USBFS composite transport. Interface 0 carries
-// DirtyJTAG on EP1/EP2; interface 1 carries CMSIS-DAP v2 on EP4/EP3. A non-null
-// UART pointer adds CDC ACM interfaces 2/3.
-// Wire work always runs in main context while the corresponding OUT endpoint
-// is NAKed.
-class UsbDirtyJtag
+// Interrupt-driven CH32X035 USBFS transport. Interface 0 carries CMSIS-DAP v2
+// on EP1/EP2. A non-null UART pointer adds CDC ACM interfaces 1/2.
+// SWD/JTAG work always runs in main context while EP1 OUT is NAKed.
+class UsbCmsisDap
 {
 public:
     static constexpr size_t kPacketSize = 64;
@@ -30,26 +28,21 @@ public:
     void requestUartRxDrain();
 #endif
 
-    // Copies the oldest pending OUT packet across both interfaces. This keeps
-    // first-arrival ownership independent of main-loop polling order. The
-    // selected endpoint remains NAKed until its matching finish method.
-    bool takeNextPacket(uint8_t* destination, size_t& length, bool& cmsisDap);
+    // EP1 remains NAKed until finish() completes the command.
+    bool takeNextPacket(uint8_t* destination, size_t& length);
 
-    // Reports which transport session must release the shared target wire.
-    bool takeSessionReset(bool& dirtyJtag, bool& cmsisDap);
+    // Reports a USB/session reset or an abandoned CMSIS-DAP reply.
+    bool takeSessionReset();
 
     // Completes processing. A non-empty response is sent on EP2 IN; otherwise
     // EP1 OUT is immediately rearmed for the next command packet.
     bool finish(const uint8_t* response, size_t length);
-
-    bool finishCmsisDap(const uint8_t* response, size_t length);
 
     void onIrq();
     static void handleIrq() { if (self_) self_->onIrq(); }
 
 private:
     void endpointInit();
-    void resetDirtyJtagEndpoints(bool resetOutToggle, bool resetInToggle);
     void resetCmsisDapEndpoints(bool resetOutToggle, bool resetInToggle);
 #ifdef UART_BRIDGE
     void resetCdcEndpoints(bool resetOutToggle, bool resetInToggle);
@@ -64,14 +57,10 @@ private:
 #endif
     void busReset();
     void armOut();
-    void armCmsisDapOut();
 
-    // CH32X035 EP4 has no DMA register: its fixed buffer starts 64 bytes
-    // after UEP0_DMA, hence this deliberately contiguous allocation.
-    alignas(4) uint8_t ep0_[kPacketSize * 2];
+    alignas(4) uint8_t ep0_[kPacketSize];
     alignas(4) uint8_t ep1Out_[kPacketSize];
     alignas(4) uint8_t ep2In_[kPacketSize];
-    alignas(4) uint8_t ep3In_[kPacketSize];
 #ifdef UART_BRIDGE
     alignas(4) uint8_t ep5Notify_[8];
     alignas(4) uint8_t ep6Out_[kPacketSize];
@@ -92,16 +81,7 @@ private:
     volatile bool packetTaken_ = false;
     volatile bool txBusy_ = false;
     volatile uint32_t txStartedMs_ = 0;
-    volatile uint8_t dapPendingLength_ = 0;
-    volatile bool dapPacketPending_ = false;
-    volatile bool dapPacketTaken_ = false;
-    volatile bool dapTxBusy_ = false;
-    volatile uint32_t dapTxStartedMs_ = 0;
-    volatile uint32_t arrivalCounter_ = 0;
-    volatile uint32_t dirtyJtagArrival_ = 0;
-    volatile uint32_t cmsisDapArrival_ = 0;
-    volatile bool dirtyJtagResetPending_ = false;
-    volatile bool cmsisDapResetPending_ = false;
+    volatile bool sessionResetPending_ = false;
 #ifdef UART_BRIDGE
     volatile uint8_t cdcOutPendingLength_ = 0;
     volatile bool cdcOutPending_ = false;
@@ -119,5 +99,5 @@ private:
     uint8_t deviceConfiguration_ = 0;
     volatile uint8_t sleepStatus_ = 0;
 
-    static UsbDirtyJtag* self_;
+    static UsbCmsisDap* self_;
 };

@@ -29,7 +29,10 @@ int main()
     assert(PiocSwdProtocol::validAck(1));
     assert(PiocSwdProtocol::validAck(2));
     assert(PiocSwdProtocol::validAck(4));
+    assert(PiocSwdProtocol::validAck(7));
     assert(!PiocSwdProtocol::validAck(0));
-    assert(!PiocSwdProtocol::validAck(7));
+    assert(!PiocSwdProtocol::validAck(3));
+    assert(!PiocSwdProtocol::validAck(5));
+    assert(!PiocSwdProtocol::validAck(6));
     return 0;
 }

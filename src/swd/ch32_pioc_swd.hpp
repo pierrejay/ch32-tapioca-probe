@@ -30,9 +30,6 @@ private:
     bool runCommand(uint8_t command);
     void loadEngine();
     void ensureEngine();
-    void configureOutput(GPIO_TypeDef* port, uint32_t pin,
-                         GPIO_CFGLR_PIN_MODE_Typedef mode = GPIO_CFGLR_OUT_10Mhz_PP);
-    void configureInput(GPIO_TypeDef* port, uint32_t pin);
     void setReset(bool high);
     bool getClock() const;
     bool getData() const;

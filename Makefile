@@ -17,7 +17,6 @@ ifneq ($(JTAG_TRST),1)
 $(error JTAG_TRST must be 0 or 1)
 endif
 endif
-
 ifeq ($(BOARD),reference)
 BOARD_SUFFIX :=
 BOARD_CPPFLAGS :=
@@ -104,11 +103,10 @@ endif
 
 JTAGSWD_SOURCES := \
 	src/main_jtagswd.cpp \
-	src/dirtyjtag/ch32_jtag.cpp \
-	src/dirtyjtag/protocol.cpp \
+	src/jtag/ch32_jtag.cpp \
 	src/swd/ch32_pioc_swd.cpp \
 	src/swd/cmsis_dap.cpp \
-	src/usb/usb_dirtyjtag.cpp
+	src/usb/usb_cmsis_dap.cpp
 
 WCHLINK_SOURCES := \
 	src/main_wchlink.cpp \
@@ -124,7 +122,7 @@ VALID_PROFILES := jtagswd $(WCH_PROFILES)
 
 ifeq ($(PROFILE),jtagswd)
 SOURCES := $(COMMON_SOURCES) $(JTAGSWD_SOURCES)
-CPPFLAGS_PROFILE := -Isrc/dirtyjtag -Isrc/swd -Isrc/usb
+CPPFLAGS_PROFILE := -Isrc/jtag -Isrc/swd -Isrc/usb
 else ifneq ($(filter $(PROFILE),$(WCH_PROFILES)),)
 SOURCES := $(COMMON_SOURCES) $(WCHLINK_SOURCES)
 CPPFLAGS_PROFILE := -Isrc/wchlink -Isrc/usb
@@ -171,17 +169,17 @@ help:
 		'Firmware options (defaults shown):' \
 		'  BOARD=reference       reference | weact (WeAct uses LED PB12)' \
 		'  UART_BRIDGE=0          1 adds the PB0/PB1 USB CDC UART bridge' \
-		'  JTAG_TRST=0            1 routes physical JTAG nTRST to PA5 (jtagswd only)' \
+		'  JTAG_TRST=0            1 uses PA5 as physical nTRST (jtagswd only)' \
 		'  RISCV_PREFIX=<prefix>  override RISC-V toolchain auto-detection' \
 		'  EXTRA_CPPFLAGS=<flags> advanced custom board/compiler definitions' \
 		'' \
 		'Build and flash:' \
 		'  make all               build both default firmwares and host minichlink' \
-		'  make jtagswd           build the JTAG + CMSIS-DAP firmware' \
+		'  make jtagswd           build the CMSIS-DAP SWD/JTAG firmware' \
 		'  make wchlink           build the auto-detecting WCH-Link firmware' \
-		'  make flash-jtagswd     build and flash JTAG/SWD through USB ISP' \
+		'  make flash-jtagswd     build and flash CMSIS-DAP SWD/JTAG through USB ISP' \
 		'  make flash-wchlink     build and flash WCH-Link through USB ISP' \
-		'  make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 flash-jtagswd' \
+		'  make BOARD=weact UART_BRIDGE=1 flash-jtagswd' \
 		'' \
 		'Other targets:' \
 		'  make minichlink        build the pinned host-side minichlink' \
@@ -265,28 +263,24 @@ $(WCHLINK_DIAG): sdk/wchlink_diag.c
 	@test -n "$(LIBUSB_LIBS)" || { echo "libusb-1.0 development files not found by pkg-config." >&2; exit 1; }
 	$(HOST_CC) -std=c11 -O2 -Wall -Wextra $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) -o $@
 
-HOST_TESTS := packet_order_test pioc_swd_protocol_test wch_rvswd_frame_test \
-	wch_link_fixtures_test cmsis_dap_test protocol_test wch_link_protocol_test \
+HOST_TESTS := pioc_swd_protocol_test wch_rvswd_frame_test \
+	wch_link_fixtures_test cmsis_dap_test wch_link_protocol_test \
 	usb_descriptors_test
 HOST_TEST_BINS := $(addprefix $(BUILD_ROOT)/tests/,$(HOST_TESTS))
 HOST_TEST_OBJECTS := \
 	$(addprefix $(BUILD_ROOT)/tests/obj/tests/,$(addsuffix .o,$(HOST_TESTS))) \
 	$(BUILD_ROOT)/tests/obj/src/swd/cmsis_dap.o \
-	$(BUILD_ROOT)/tests/obj/src/dirtyjtag/protocol.o \
 	$(BUILD_ROOT)/tests/obj/src/wchlink/protocol.o
 HOST_TEST_DEPS := $(HOST_TEST_OBJECTS:.o=.d)
 
 test: $(HOST_TEST_BINS)
 	@for test_bin in $^; do $$test_bin || exit; done
 
-$(BUILD_ROOT)/tests/packet_order_test: $(BUILD_ROOT)/tests/obj/tests/packet_order_test.o
 $(BUILD_ROOT)/tests/pioc_swd_protocol_test: $(BUILD_ROOT)/tests/obj/tests/pioc_swd_protocol_test.o
 $(BUILD_ROOT)/tests/wch_rvswd_frame_test: $(BUILD_ROOT)/tests/obj/tests/wch_rvswd_frame_test.o
 $(BUILD_ROOT)/tests/wch_link_fixtures_test: $(BUILD_ROOT)/tests/obj/tests/wch_link_fixtures_test.o
 $(BUILD_ROOT)/tests/cmsis_dap_test: $(BUILD_ROOT)/tests/obj/tests/cmsis_dap_test.o \
 	$(BUILD_ROOT)/tests/obj/src/swd/cmsis_dap.o
-$(BUILD_ROOT)/tests/protocol_test: $(BUILD_ROOT)/tests/obj/tests/protocol_test.o \
-	$(BUILD_ROOT)/tests/obj/src/dirtyjtag/protocol.o
 $(BUILD_ROOT)/tests/wch_link_protocol_test: $(BUILD_ROOT)/tests/obj/tests/wch_link_protocol_test.o \
 	$(BUILD_ROOT)/tests/obj/src/wchlink/protocol.o
 $(BUILD_ROOT)/tests/usb_descriptors_test: $(BUILD_ROOT)/tests/obj/tests/usb_descriptors_test.o

@@ -1,5 +1,6 @@
 #include "ch32_pioc_swd.hpp"
 #include "board_config.hpp"
+#include "hal/ch32_gpio.hpp"
 #include "pioc_swd_protocol.hpp"
 #include "time.hpp"
 
@@ -46,24 +47,6 @@ void write32(uint8_t* output, uint32_t value)
 }
 }
 
-void Ch32PiocSwd::configureOutput(GPIO_TypeDef* port, uint32_t pins,
-                                  GPIO_CFGLR_PIN_MODE_Typedef mode)
-{
-    for (uint32_t bit = 0; bit < 24; ++bit)
-    {
-        if ((pins & (1u << bit)) == 0) continue;
-        volatile uint32_t* cfg = bit < 8 ? &port->CFGLR :
-                                 bit < 16 ? &port->CFGHR : &port->CFGXR;
-        const uint32_t shift = (bit & 7u) * 4u;
-        *cfg = (*cfg & ~(0xfu << shift)) | (static_cast<uint32_t>(mode) << shift);
-    }
-}
-
-void Ch32PiocSwd::configureInput(GPIO_TypeDef* port, uint32_t pin)
-{
-    configureOutput(port, pin, GPIO_CFGLR_IN_FLOAT);
-}
-
 void Ch32PiocSwd::init()
 {
     RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC |
@@ -73,7 +56,7 @@ void Ch32PiocSwd::init()
 
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
     setReset(true);
 }
 
@@ -85,7 +68,8 @@ void Ch32PiocSwd::loadEngine()
     static_assert(sizeof(program) <= 4096, "PIOC program exceeds reserved SRAM");
 
     R8_SYS_CFG = 0;
-    configureOutput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19, GPIO_CFGLR_OUT_10Mhz_AF_PP);
+    Ch32Gpio::configure(GPIOC, GPIO_Pin_18 | GPIO_Pin_19,
+                        GPIO_CFGLR_OUT_10Mhz_AF_PP);
     memcpy(reinterpret_cast<void*>(PIOC_SRAM_BASE), program, sizeof(program));
 
     R8_DATA_REG0 = 0;
@@ -146,7 +130,7 @@ void Ch32PiocSwd::disconnect()
 {
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
     setReset(true);
     pinState_ |= (1u << PinSwclk) | (1u << PinSwdio) | (1u << PinNreset);
 }
@@ -278,13 +262,7 @@ void Ch32PiocSwd::delayUs(uint32_t microseconds)
 void Ch32PiocSwd::setReset(bool high)
 {
     // Open-drain emulation: never source the target reset rail.
-    if (high) configureInput(TARGET_RESET_PORT, TARGET_RESET_PIN);
-    else
-    {
-        TARGET_RESET_PORT->BCR = TARGET_RESET_PIN;
-        configureOutput(TARGET_RESET_PORT, TARGET_RESET_PIN);
-        TARGET_RESET_PORT->BCR = TARGET_RESET_PIN;
-    }
+    Ch32Gpio::setOpenDrain(TARGET_RESET_PORT, TARGET_RESET_PIN, high);
 }
 
 bool Ch32PiocSwd::getClock() const

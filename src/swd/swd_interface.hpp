@@ -11,6 +11,7 @@ public:
     static constexpr uint8_t AckOk = 0x01;
     static constexpr uint8_t AckWait = 0x02;
     static constexpr uint8_t AckFault = 0x04;
+    static constexpr uint8_t AckNoAck = 0x07;
     static constexpr uint8_t AckError = 0x08;
 
     virtual void init() = 0;

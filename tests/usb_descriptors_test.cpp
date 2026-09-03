@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "usb/dirtyjtag_descriptors.hpp"
+#include "usb/cmsis_dap_descriptors.hpp"
 #include "usb/wchlink_descriptors.hpp"
 
 namespace
@@ -15,7 +15,8 @@ constexpr uint8_t kEndpoint = 0x05;
 constexpr uint8_t kIad = 0x0b;
 
 template <size_t N>
-void checkBaseConfiguration(const uint8_t (&descriptor)[N], uint8_t interfaceCount)
+void checkBaseConfiguration(const uint8_t (&descriptor)[N], uint8_t interfaceCount,
+                            uint8_t outEndpoint, uint8_t inEndpoint)
 {
     assert(N >= 9);
     assert(descriptor[0] == 9 && descriptor[1] == kConfiguration);
@@ -23,6 +24,7 @@ void checkBaseConfiguration(const uint8_t (&descriptor)[N], uint8_t interfaceCou
     assert(descriptor[4] == interfaceCount);
 
     std::array<bool, 16> interfaces{};
+    std::array<bool, 256> endpoints{};
     for (size_t offset = 0; offset < N;)
     {
         const uint8_t length = descriptor[offset];
@@ -35,11 +37,14 @@ void checkBaseConfiguration(const uint8_t (&descriptor)[N], uint8_t interfaceCou
         if (descriptor[offset + 1] == kEndpoint)
         {
             const uint8_t address = descriptor[offset + 2];
+            assert(!endpoints[address]);
+            endpoints[address] = true;
             assert(address != 0x85 && address != 0x06 && address != 0x87);
         }
         offset += length;
     }
     for (uint8_t i = 0; i < interfaceCount; ++i) assert(interfaces[i]);
+    assert(endpoints[outEndpoint] && endpoints[inEndpoint]);
 }
 
 template <size_t N>
@@ -95,25 +100,27 @@ void checkUartConfiguration(const uint8_t (&descriptor)[N], uint8_t interfaceCou
 
 int main()
 {
-    namespace Dirty = DirtyJtagUsbDescriptors;
+    namespace Dap = CmsisDapUsbDescriptors;
     namespace Wch = WchLinkUsbDescriptors;
 
-    checkBaseConfiguration(Dirty::configuration, 2);
-    checkBaseConfiguration(Wch::configuration, 1);
-    assert(Dirty::configuration[8] == Dirty::kMaxPower);
+    checkBaseConfiguration(Dap::configuration, 1, 0x01, 0x82);
+    checkBaseConfiguration(Wch::configuration, 1, 0x01, 0x81);
+    assert(Dap::configuration[8] == Dap::kMaxPower);
     assert(Wch::configuration[8] == Wch::kMaxPower);
-    checkUartConfiguration(Dirty::configurationWithUart, 4,
-                           Dirty::kCdcControlInterface, Dirty::kCdcDataInterface,
-                           Dirty::kCdcNotifyEndpoint, Dirty::kCdcOutEndpoint,
-                           Dirty::kCdcInEndpoint);
+    checkUartConfiguration(Dap::configurationWithUart, 3,
+                           Dap::kCdcControlInterface, Dap::kCdcDataInterface,
+                           Dap::kCdcNotifyEndpoint, Dap::kCdcOutEndpoint,
+                           Dap::kCdcInEndpoint);
     checkUartConfiguration(Wch::configurationWithUart, 3,
                            Wch::kCdcControlInterface, Wch::kCdcDataInterface,
                            Wch::kCdcNotifyEndpoint, Wch::kCdcOutEndpoint,
                            Wch::kCdcInEndpoint);
-    assert(Dirty::configurationWithUart[8] == Dirty::kMaxPower);
+    assert(Dap::configurationWithUart[8] == Dap::kMaxPower);
     assert(Wch::configurationWithUart[8] == Wch::kMaxPower);
     assert(Wch::device[4] == 0x00);
     assert(Wch::deviceWithUart[4] == 0xef);
+    assert(Dap::device[4] == 0x00);
+    assert(Dap::deviceWithUart[4] == 0xef);
 
     std::cout << "usb_descriptors_test: base and UART descriptors OK\n";
 }

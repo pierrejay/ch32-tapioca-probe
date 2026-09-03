@@ -6,13 +6,6 @@ public protocol specifications.
 
 ## Redistributed / adapted code
 
-### DirtyJTAG (Jean Thomas and contributors)
-- Upstream: <https://github.com/dirtyjtag/DirtyJTAG>
-- Used in: [`src/dirtyjtag/`](src/dirtyjtag/) — the DirtyJTAG v2 USB command core is **adapted** from
-  DirtyJTAG (see the header of [`src/dirtyjtag/protocol.cpp`](src/dirtyjtag/protocol.cpp)).
-- License: MIT. Reflected by the second copyright line in [`LICENSE`](LICENSE)
-  (`Copyright (c) 2017-2022 Jean THOMAS and DirtyJTAG contributors.`).
-
 ### Tapioca (myself)
 - Upstream: <https://github.com/pierrejay/ch32-tapioca> (sibling project).
 - Used in: the PIOC bit-bang primitives and timing this project reuses —

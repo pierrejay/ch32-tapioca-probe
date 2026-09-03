@@ -18,12 +18,10 @@ c++ -std=c++17 -Wall -Wextra -Isrc -Itests tests/<name>.cpp -o /tmp/<name> && /t
 Header-only tests (recipe above as-is):
 - `wch_rvswd_frame_test.cpp` — RVSWD 52-bit frame codec vs golden captured frames
 - `wch_link_fixtures_test.cpp` — WCH-Link USB request/reply fixtures
-- `packet_order_test.cpp` — USB packet ordering
 - `pioc_swd_protocol_test.cpp` — PIOC SWD transfer framing
 
 These also need their module's `.cpp` on the command line:
 - `cmsis_dap_test.cpp` + `src/swd/cmsis_dap.cpp`
-- `protocol_test.cpp` + `src/dirtyjtag/protocol.cpp`
 - `wch_link_protocol_test.cpp` + `src/wchlink/protocol.cpp`
 
 ## Release validation
@@ -40,7 +38,7 @@ make test HOST_CXXFLAGS="-std=c++17 -Wall -Wextra -fsanitize=address,undefined -
 make all
 make BOARD=weact jtagswd wchlink
 make UART_BRIDGE=1 wchlink
-make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 jtagswd
+make BOARD=weact UART_BRIDGE=1 jtagswd
 make wchlink-rvswio wchlink-rvswio-emit wchlink-rvswd wchlink-rvswd-emit
 make wchlink-diag
 ```
@@ -103,20 +101,21 @@ RVSWD-specific failure checks:
    `busy` replies; a sustained busy condition must terminate at the 5 ms transport
    bound rather than the host's 5 s USB timeout.
 
-### CMSIS-DAP and DirtyJTAG hardware matrix
+### CMSIS-DAP hardware matrix
 
 Flash `make flash-jtagswd` and validate:
 
 | Interface | Targets | Host tools | Required checks |
 |---|---|---|---|
 | SWD | STM32G431, STM32H523 | probe-rs and OpenOCD | attach, halt, SRAM R/W, program, verify, reset/run, RTT |
-| JTAG | STM32G431, STM32H523 | OpenOCD and openFPGALoader | chain scan/IDCODE, program, verify, reset/run |
+| JTAG | STM32H523 | probe-rs and OpenOCD | chain discovery, attach, halt/run, SRAM R/W, program, verify, reset |
 
-Use the checked-in SWD configurations where applicable:
+Use the checked-in OpenOCD profiles where applicable:
 
 ```sh
 openocd -f openocd/stm32g431-pioc-swd.cfg
 openocd -f openocd/stm32h523-pioc-swd.cfg
+openocd -f openocd/stm32h523-jtag.cfg
 ```
 
 For both SWD targets, run 100 independent attach/read-DPIDR/disconnect cycles and
@@ -130,9 +129,17 @@ fault-injection build that disables the PIOC clock immediately before publishing
 `GO`; the USB command must return an error after approximately 5 ms and increment
 `mailboxTimeouts`. Do not keep that injection in a release binary.
 
-Finally, switch JTAG → SWD → JTAG without reflashing. Explicit disconnect must
-release ownership immediately; killing a client without disconnecting must allow
-the other interface to acquire the wire after the documented ~1 s idle timeout.
+For JTAG, verify that the H523 chain reports the ARM DP (`0x6ba00477`) followed
+by the boundary-scan TAP (`0x06478041`). Repeat SRAM reads at 500 kHz and 2 MHz,
+then halt, resume and reset the core. With `UART_BRIDGE=1`, repeat a long UART
+loopback while issuing independent JTAG memory reads; neither stream may be
+corrupted or stall. Program and verify a target image with probe-rs.
+
+To validate automatic SWD-to-JTAG recovery, leave the H523 in normal SWD with a
+probe-rs SWD session, then start the checked-in OpenOCD JTAG profile directly,
+without a target power-cycle or an intervening OpenOCD SWD shutdown. The complete
+two-TAP chain must be detected. Repeat the JTAG connection once more from JTAG.
+Recovery from the Arm dormant state is outside this best-effort transition.
 
 ### USB/session recovery
 
@@ -143,7 +150,8 @@ For each firmware personality:
    without a USB reset or replug.
 2. Perform a host USB reset, then retry the target operation.
 3. Suspend/resume the host or hub and retry.
-4. Repeat with both USB interfaces of the JTAG/SWD composite device enumerated.
+4. With `UART_BRIDGE=1`, repeat while the CDC interface is open and carrying
+   bidirectional traffic.
 
 The release is qualified only when every applicable row passes on macOS and Linux.
 WSL is outside the supported qualification matrix.

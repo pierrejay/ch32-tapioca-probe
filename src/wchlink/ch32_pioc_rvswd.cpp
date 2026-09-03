@@ -1,5 +1,6 @@
 #include "ch32_pioc_rvswd.hpp"
 
+#include "hal/ch32_gpio.hpp"
 #include "rvswd_frame.hpp"
 #include "time.hpp"
 
@@ -33,24 +34,6 @@ constexpr uint32_t DmiBusyTimeoutUs = 5000;
 #define RVSWD_GUARD_US 8
 #endif
 
-void configureOutput(GPIO_TypeDef* port, uint32_t pin,
-                     GPIO_CFGLR_PIN_MODE_Typedef mode = GPIO_CFGLR_OUT_10Mhz_AF_PP)
-{
-    for (uint32_t bit = 0; bit < 24; ++bit)
-    {
-        if ((pin & (1u << bit)) == 0) continue;
-        volatile uint32_t* cfg = bit < 8 ? &port->CFGLR :
-                                 bit < 16 ? &port->CFGHR : &port->CFGXR;
-        const uint32_t shift = (bit & 7u) * 4u;
-        *cfg = (*cfg & ~(0xfu << shift)) | (static_cast<uint32_t>(mode) << shift);
-    }
-}
-
-void configureInput(GPIO_TypeDef* port, uint32_t pin)
-{
-    configureOutput(port, pin, GPIO_CFGLR_IN_FLOAT);
-}
-
 // Map the raw 2-bit target status onto the transport-level DmiStatus.
 DmiStatus mapStatus(uint8_t raw)
 {
@@ -77,7 +60,7 @@ void Ch32PiocRvswd::init()
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
     // Park both wires as floating inputs until a transaction is requested.
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
 }
 
 bool Ch32PiocRvswd::getDiagnostics(WchLink::DmiDiagnostics& diagnostics) const
@@ -122,7 +105,8 @@ void Ch32PiocRvswd::loadEngine()
     static_assert(sizeof(program) <= 4096, "PIOC program exceeds reserved SRAM");
 
     R8_SYS_CFG = 0;
-    configureOutput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::configure(GPIOC, GPIO_Pin_18 | GPIO_Pin_19,
+                        GPIO_CFGLR_OUT_10Mhz_AF_PP);
     memcpy(reinterpret_cast<void*>(PIOC_SRAM_BASE), program, sizeof(program));
 
     R8_DATA_REG0 = 0; // CTRL
@@ -313,5 +297,5 @@ void Ch32PiocRvswd::disconnect()
 {
     R8_SYS_CFG = 0;
     engineLoaded_ = false;
-    configureInput(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
+    Ch32Gpio::floatPins(GPIOC, GPIO_Pin_18 | GPIO_Pin_19);
 }

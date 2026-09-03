@@ -2,90 +2,115 @@
 
 Two build-time USB debug-probe firmwares for CH32X035:
 
-1. **JTAG + ARM SWD**: a homemade DirtyJTAG v2 & CMSIS-DAP v2 probe. Both share one firmware, and the first target command claims the shared wire (no reflash or rewiring).
+1. **CMSIS-DAP SWD + JTAG**: an ARM debug probe for OpenOCD and probe-rs.
 2. **WCH-Link**: a WCH-LinkE-like probe for CH32 RISC-V, both single-wire **RVSWIO** and two-wire **RVSWD**, driven by stock `minichlink`. Auto-detects RVSWIO vs RVSWD per target.
 
-It reuses the proven PIOC primitives from the sibling [**Tapioca**](https://github.com/pierrejay/ch32-tapioca) project.
+The ~€0.25 CH32X035 needs few external parts and fits in a 3 x 3 mm QFN;
+its PIOC coprocessor nicely handles the timing-critical single- and two-wire protocols,
+making it practical to embed the probe directly into a product.
 
-Based on the [ch32fun](https://github.com/cnlohr/ch32fun) SDK.
+The project is based on [ch32fun](https://github.com/cnlohr/ch32fun) and reuses
+the proven PIOC primitives from the sibling
+[Tapioca](https://github.com/pierrejay/ch32-tapioca) project.
 
-A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVSWIO, RVSWD) is also provided with EasyEDA & KiCad source files.
+A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD,
+WCH RVSWIO & RVSWD) is also provided with EasyEDA & KiCad source files.
 
 <img src="hardware/pcb_pic_probe.png" alt="CH32 Tapioca Probe reference board" width="300">
 
-## Why?
-
-- The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**.
-- The PIOC (RISC8B coprocessor) is perfect for emulating single- or two-wire protocols deterministically.
-
 ## Tested
 
-| Family | Interface | Chips | Host tool |
+| Family | Interface | Chips | Host tools |
 |---|---|---|---|
-| ARM | JTAG | STM32H523, STM32G431 | openFPGALoader, OpenOCD |
 | ARM | SWD (CMSIS-DAP) | STM32H523, STM32G431 | OpenOCD, probe-rs |
+| ARM | JTAG (CMSIS-DAP) | STM32H523 | OpenOCD, probe-rs |
 | CH32 | RVSWIO (1-wire) | CH32V003, CH32H417 | minichlink, probe-rs |
 | CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink, probe-rs |
 
 ## Features
 
-- **Debug transports:** JTAG, ARM SWD and WCH-Link RVSWIO/RVSWD, detailed in the
+- **Debug transports:** ARM SWD/JTAG and WCH-Link RVSWIO/RVSWD, detailed in the
   two products below.
 - **UART bridge:** optional native USB CDC ACM on USART4 (`PB0/TX`, `PB1/RX`),
   enabled with `make UART_BRIDGE=1` and configurable through the host serial port.
-- **Target power:** default-on, reverse-current-protected 500 mA load switch.
-  Switching it off parks UART and removes the DIO pull-up for hard isolation,
-  avoiding parasitic powering of the DUT.
-- **Activity LED:** shows the target-power state and briefly inverts it during
-  debug or UART traffic.
+- **Target power:** optional load switch controlled through `PA3`; host control is
+  currently available with the WCH-Link firmware.
+  Switching it off parks UART pins, avoiding parasitic powering of the DUT.
+- **Activity LED:** shows the target-power state and blinks during debug or UART
+  traffic.
 
 > **Self-powered DUT:** the load switch protects the probe, so `3V3` may remain
-> connected. In any case, keep target power on to retain UART and DIO functionality.
+> connected. In any case, keep target power on to retain UART functionality.
 
 The debug firmwares are host-driven transports: the probe executes the
 timing-critical wire transactions, while OpenOCD, probe-rs or minichlink owns
 the target-specific flash algorithm.
 
-### Product 1: JTAG + ARM SWD (USB `1209:C0CA`)
+### Product 1: CMSIS-DAP SWD + JTAG (USB `1209:C0CA`)
 
-One firmware provides two USB interfaces, mutually exclusive on the shared wire:
-
-- **DirtyJTAG v2** (interface 0): JTAG debug for openFPGALoader / urjtag / OpenOCD.
-- **CMSIS-DAP v2** (interface 1): ARM SWD flash/debug, ST-Link-style, for OpenOCD / probe-rs.
-- **Seamless switch**: `DAP_Connect` claims SWD and the first DirtyJTAG target packet claims JTAG; the probe arbitrates ownership of the shared PC18/PC19 wire. A stale owner (client exited) is auto-preempted after ~1 s idle, so switching JTAG ↔ SWD needs no reflash, rewire or manual release.
+The firmware exposes one **CMSIS-DAP v2** bulk interface for ARM SWD and JTAG
+with OpenOCD and probe-rs. `DAP_Connect(0)` selects SWD by default; explicit
+`DAP_Connect(1)` and `DAP_Connect(2)` select SWD and JTAG respectively. An
+optional CDC ACM UART bridge is exposed as a second USB function when built
+with `UART_BRIDGE=1`.
 
 #### Pinout
 
-JTAG and SWD share PC18/PC19 (SWJ-DP):
+The full firmware pinout supports complete SWJ-DP wiring; the minimal reference
+PCB routes only the shared SWD pins:
 
 | Signal | Pin | Notes |
 |---|---|---|
-| JTAG `TCK` / SWD `SWCLK` | **PC18** (PIOC IO0) | |
-| JTAG `TMS` / SWD `SWDIO` | **PC19** (PIOC IO1) | shared JTAG/SWD data |
-| JTAG `TDI` | PA7 | JTAG only |
-| JTAG `TDO` | PA6 | JTAG only |
+| SWD `SWCLK` / JTAG `TCK` | **PC18** (PIOC IO0) | |
+| SWD `SWDIO` / JTAG `TMS` | **PC19** (PIOC IO1) | shared SWJ data |
+| JTAG `TDI` | PA7 | |
+| JTAG `TDO` | PA6 | |
 | `nSRST` / SWD `nRESET` | PA4 | optional recovery |
-| JTAG `nTRST` | PA5 | `JTAG_TRST=1`; otherwise TMS-emulated |
+| JTAG `nTRST` | PA5 | optional (needs `JTAG_TRST=1`); otherwise PA5 is free |
 | UART `TX` | PB0 | probe to target |
 | UART `RX` | PB1 | target to probe |
 
 #### Notes
 
-- JTAG is bit-banged on the main CPU's GPIO, its four wires don't fit the 2-pin PIOC. Only ARM SWD w/ two wires runs on the PIOC.
+- SWD runs a single fixed ~1 MHz profile (`DAP_SWJ_Clock` is accepted for host
+  compatibility but doesn't change it). The ARM SWD path is validated for
+  correctness, not tuned for speed; its throughput has not been benchmarked
+  against a commercial probe.
 
-- SWD runs a single fixed ~1 MHz profile (`DAP_SWJ_Clock` is accepted for host compatibility but doesn't change it). The ARM SWD path is validated for correctness, not tuned for speed; its throughput has not been qualified or benchmarked against a commercial probe (e.g. ST-Link).
+- JTAG uses a GPIO engine and accepts host clock requests from 1 kHz to 2 MHz.
+  Chain discovery, halt/run, reset and SRAM access were validated on STM32H523
+  with both OpenOCD and probe-rs, including concurrent UART traffic. Target
+  programming was validated with probe-rs at roughly 12 KiB/s. This is modest,
+  but still useful for troubleshooting and recovery.
 
-- Full run-control debugging with SWD, not just flashing. RTT also works (host-side: `OpenOCD rtt` or `defmt`/`probe-rs`...): plain target-memory access over the debug link without trace pin.
+- Select the transport explicitly in the host (`--protocol swd|jtag` with
+  probe-rs, or `transport select swd|jtag` with OpenOCD). SWD remains the probe's
+  default when the host does not choose. SWJ mode-switch handling varies between
+  host tools and versions: OpenOCD 0.12 assumes a target is already in JTAG when
+  starting directly in JTAG, while probe-rs actively switches it. If another
+  tool leaves the target in SWD, run and cleanly close an OpenOCD SWD session or
+  power-cycle the target before starting OpenOCD JTAG.
 
-- There is no SWO/ITM trace yet (no `DAP_SWO_*` commands), so `printf`-over-SWO and instruction trace aren't available.
+- `probe-rs info --protocol swd` can pause for about ten seconds after finding a
+  valid DPv2 target because an upstream discovery regression also probes two
+  RP2040 multidrop addresses. This is a probe-rs quirk, not a Tapioca transport
+  timeout; normal target-specific attach and flashing are unaffected.
 
-- The CMSIS-DAP implementation is the SWD subset exercised by OpenOCD and
-  probe-rs. Transfer value matching and the optional SWJ pin-wait behavior are
-  not implemented; unsupported features are not advertised as probe capabilities.
+- Full run-control debugging works with both SWD and JTAG, not just flashing.
+  RTT also works over SWD (`OpenOCD rtt` or `defmt`/probe-rs): it uses ordinary
+  target-memory access and needs no trace pin.
 
-- Example OpenOCD configs for driving a target through the probe are in [`openocd/`](openocd/) (e.g. `stm32g431-pioc-swd.cfg`).
+- There is no SWO/ITM trace yet (no `DAP_SWO_*` commands), so `printf`-over-SWO and
+  instruction trace aren't available.
 
-### Product 2: WCH-Link, RVSWIO & RVSWD  (USB `1a86:8010`)
+- The CMSIS-DAP SWD and JTAG paths exercised by OpenOCD and probe-rs are
+  implemented. Transfer value matching and the optional SWJ pin-wait behavior
+  are not; unsupported features are not advertised as probe capabilities.
+
+- Example OpenOCD configs for driving targets through the probe are in
+  [`openocd/`](openocd/), including the validated STM32H523 JTAG chain.
+
+### Product 2: WCH-Link, RVSWIO & RVSWD (USB `1a86:8010`)
 
 A WCH-LinkE-compatible probe for CH32 RISC-V, driven by **stock minichlink** or
 **probe-rs 0.32+** where its target support is available.
@@ -112,13 +137,17 @@ One data line, plus a clock for the 2-wire parts:
 | `SWDIO` / `SWIO` | **PC19** (PIOC IO1) | data (1- & 2-wire) |
 | UART `TX` | PB0 | probe to target |
 | UART `RX` | PB1 | target to probe |
-| 3.3 V load-switch enable | PA3 | defaults on through an external pull-up |
+| `PWREN` | PA3 | target 3.3V load switch (optional, defaults on) |
 
 #### Notes
 
-- Some MCUs (e.g. CH32V003 1-wire and CH32X035 2-wire) drive SWDIO open-drain and need an external **~4.7–10 kΩ pull-up** to 3.3 V. Others (like CH32V203/V307) work without one; a default pull-up on the probe's PC19 makes it universal.
+- Some MCUs (e.g. CH32V003 1-wire and CH32X035 2-wire) drive SWDIO
+  open-drain and need an external **~4.7–10 kΩ pull-up** to 3.3 V. Others (like
+  CH32V203/V307) work without one. The reference board uses a 5.1 kΩ pull-up, which
+  makes it universal.
 
-- On the same direct-DMI `minichlink` it flashes ~15 % faster than a genuine WCH-LinkE R0-1v3 and reads ~30 % faster (CH32V203, 32 KB payload). Insignificant in practice, and likely not true against newer probes using the vendor toolchain, but a good sign that the PIOC approach holds up. These performance figures are specific to `minichlink`; there is still plenty of headroom to optimise the USB link and flashing process.
+- On the same direct-DMI `minichlink` it flashes ~15 % faster than a genuine WCH-LinkE
+  R0-1v3 and reads ~30 % faster (CH32V203, 32 KB payload). Insignificant in practice, and not directly comparable with vendor algorithms (e.g. using wlink), but a good sign that the PIOC approach holds up. There is still plenty of headroom to optimise the USB link and flashing process.
 
 - Some older `minichlink` builds don't drive direct-DMI. `make minichlink` builds
   the pinned version directly from the ch32fun submodule.
@@ -126,7 +155,7 @@ One data line, plus a clock for the 2-wire parts:
 - Target power is controlled with `minichlink -k3 -C linke` (on) and
   `minichlink -kt -C linke` (off). The `-k` avoids probing an intentionally
   unpowered target before applying the command. Power control is not yet exposed
-  by the JTAG/SWD firmware.
+  by the CMSIS-DAP firmware.
 
 ## Build & flash
 
@@ -161,12 +190,12 @@ Both products flash through the CH32X035 USB ISP bootloader with
 [`wchisp`](https://github.com/ch32-rs/wchisp) (hold `BOOT` while plugging in):
 
 ```sh
-make flash-jtagswd   # product 1: JTAG + ARM SWD
+make flash-jtagswd   # product 1: ARM SWD/JTAG (CMSIS-DAP v2)
 make flash-wchlink   # product 2: WCH-Link (auto RVSWIO/RVSWD)
 ```
 
 Firmware options and the product to flash can be selected in the same command,
-for example `make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 flash-jtagswd`.
+for example `make BOARD=weact UART_BRIDGE=1 flash-jtagswd`.
 `make help` lists every supported build option and tool override.
 
 On Linux, install the included udev rule once to access the CH32X035 ROM USB ISP
@@ -186,9 +215,15 @@ flashed over USB ISP, not SWD.
 
 ## USB identity: disclaimer
 
-Both firmwares borrow **VID/PIDs assigned to other projects/vendors** (DirtyJTAG's `1209:C0CA` and WCH-LinkE's `1a86:8010`) so that host tools like openFPGALoader, OpenOCD, probe-rs, minichlink detect the probe out of the box, with zero configuration. That is a deliberate convenience for an experimental, non-commercial project.
+Both firmwares temporarily borrow **VID/PIDs assigned to other projects/vendors**
+(`1209:C0CA` and WCH-LinkE's `1a86:8010`). CMSIS-DAP hosts discover product 1
+through its interface string; the WCH identity lets stock minichlink discover
+product 2. This is a development convenience for an experimental,
+non-commercial project.
 
-⚠️ **These identities are not ours**: this is not an official DirtyJTAG, WCH, or Arm product. If you build on this, it is your responsibility to assign a real USB identity (e.g. a [pid.codes](https://pid.codes) allocation) before distributing anything, and to not pass the probe off as an existing vendor's product.
+⚠️ **These identities are not ours**: this is not an official WCH or Arm product.
+If you build on this, assign a real USB identity (e.g. a
+[pid.codes](https://pid.codes) allocation) before distributing anything.
 
 A `pid.codes` allocation is planned for the reference probe. Until it is assigned
 and host-tool compatibility has been checked, the borrowed identities remain for
@@ -196,7 +231,6 @@ development use only.
 
 ## Credits
 
-- [**DirtyJTAG**](https://github.com/dirtyjtag/DirtyJTAG) / Jean Thomas
 - [**CMSIS-DAP**](https://github.com/ARM-software/CMSIS-DAP) / Arm
 - [**ch32fun & minichlink**](https://github.com/cnlohr/ch32fun) / Charles Lohr
 

@@ -5,24 +5,24 @@
 
 // TMS/TCK share the PIOC/SDI pins used by SWDIO/SWCLK. A target wired for
 // two-wire SWD can therefore use JTAG without moving those two signals.
-#ifndef DJTAG_TMS_PORT
-#define DJTAG_TMS_PORT GPIOC
-#define DJTAG_TMS_PIN  GPIO_Pin_19
+#ifndef JTAG_TMS_PORT
+#define JTAG_TMS_PORT GPIOC
+#define JTAG_TMS_PIN  GPIO_Pin_19
 #endif
 
-#ifndef DJTAG_TCK_PORT
-#define DJTAG_TCK_PORT GPIOC
-#define DJTAG_TCK_PIN  GPIO_Pin_18
+#ifndef JTAG_TCK_PORT
+#define JTAG_TCK_PORT GPIOC
+#define JTAG_TCK_PIN  GPIO_Pin_18
 #endif
 
-#ifndef DJTAG_TDO_PORT
-#define DJTAG_TDO_PORT GPIOA
-#define DJTAG_TDO_PIN  GPIO_Pin_6
+#ifndef JTAG_TDO_PORT
+#define JTAG_TDO_PORT GPIOA
+#define JTAG_TDO_PIN  GPIO_Pin_6
 #endif
 
-#ifndef DJTAG_TDI_PORT
-#define DJTAG_TDI_PORT GPIOA
-#define DJTAG_TDI_PIN  GPIO_Pin_7
+#ifndef JTAG_TDI_PORT
+#define JTAG_TDI_PORT GPIOA
+#define JTAG_TDI_PIN  GPIO_Pin_7
 #endif
 
 // nSRST is shared by the JTAG and CMSIS-DAP/SWD backends.
@@ -31,20 +31,20 @@
 #define TARGET_RESET_PIN  GPIO_Pin_4
 #endif
 
-#ifndef DJTAG_SRST_PORT
-#define DJTAG_SRST_PORT TARGET_RESET_PORT
-#define DJTAG_SRST_PIN  TARGET_RESET_PIN
+#ifndef JTAG_SRST_PORT
+#define JTAG_SRST_PORT TARGET_RESET_PORT
+#define JTAG_SRST_PIN  TARGET_RESET_PIN
 #endif
 
-// Optional physical JTAG test reset. Without JTAG_TRST, DirtyJTAG emulates
+// Optional physical JTAG test reset. Without JTAG_TRST, the backend emulates
 // nTRST through the standard TMS Test-Logic-Reset sequence instead.
-#ifndef DJTAG_TRST_PORT
-#define DJTAG_TRST_PORT GPIOA
-#define DJTAG_TRST_PIN  GPIO_Pin_5
+#ifndef JTAG_TRST_PORT
+#define JTAG_TRST_PORT GPIOA
+#define JTAG_TRST_PIN  GPIO_Pin_5
 #endif
 
-#ifndef DJTAG_DEFAULT_FREQUENCY_KHZ
-#define DJTAG_DEFAULT_FREQUENCY_KHZ 500
+#ifndef JTAG_DEFAULT_FREQUENCY_KHZ
+#define JTAG_DEFAULT_FREQUENCY_KHZ 500
 #endif
 
 #ifndef LOAD_SWITCH_PIN
