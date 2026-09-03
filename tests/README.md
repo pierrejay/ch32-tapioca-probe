@@ -39,6 +39,8 @@ make clean
 make test HOST_CXXFLAGS="-std=c++17 -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer"
 make all
 make BOARD=weact jtagswd wchlink
+make UART_BRIDGE=1 wchlink
+make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 jtagswd
 make wchlink-rvswio wchlink-rvswio-emit wchlink-rvswd wchlink-rvswd-emit
 make wchlink-diag
 ```

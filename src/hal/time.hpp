@@ -6,6 +6,10 @@
 namespace Time {
 
 void init();
+#ifdef UART_BRIDGE
+using TickHandler = void (*)();
+void setTickHandler(TickHandler handler);
+#endif
 uint32_t millis();
 
 // Microsecond clock: ms counter * 1000 + the 1us-resolution TIM2 counter.

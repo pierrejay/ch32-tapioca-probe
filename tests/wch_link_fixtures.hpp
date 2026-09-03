@@ -43,6 +43,11 @@ inline constexpr uint8_t kStopReply[] = {0x82, 0x0d, 0x01, 0xff}; // [I] placeho
 // ---- connect / detect (family + four-byte chip ID) -----------------------------
 inline constexpr uint8_t kConnectReq[]   = {0x81, 0x0d, 0x01, 0x02};
 inline constexpr uint8_t kConnectReply[] = {0x82, 0x0d, 0x05, 0x09, 0x00, 0x30, 0x05, 0x00};
+
+inline constexpr uint8_t kPowerOnReq[]  = {0x81, 0x0d, 0x01, 0x09};
+inline constexpr uint8_t kPowerOffReq[] = {0x81, 0x0d, 0x01, 0x0a};
+inline constexpr uint8_t kPowerOnReply[]  = {0x82, 0x0d, 0x01, 0x00};
+inline constexpr uint8_t kPowerOffReply[] = {0x82, 0x0d, 0x01, 0x00};
 inline constexpr uint8_t kConnectErrorReply[] = {0x81, 0x55, 0x01, 0x01};
 
 // ---- set family + interface speed (reply ignored, must be non-empty) -----------
@@ -75,6 +80,8 @@ inline constexpr Fixture kAll[] = {
     WCHLINK_FIXTURE(kIdentify, ReplyContract::ExactBytes),
     WCHLINK_FIXTURE(kStop,     ReplyContract::NonEmptyOnly),
     WCHLINK_FIXTURE(kConnect,  ReplyContract::ExactBytes),
+    WCHLINK_FIXTURE(kPowerOn,  ReplyContract::NonEmptyOnly),
+    WCHLINK_FIXTURE(kPowerOff, ReplyContract::NonEmptyOnly),
     WCHLINK_FIXTURE(kSetSpeed, ReplyContract::NonEmptyOnly),
     WCHLINK_FIXTURE(kDmiRead,  ReplyContract::LengthAndData),
     WCHLINK_FIXTURE(kDmiWrite, ReplyContract::LengthAndData),

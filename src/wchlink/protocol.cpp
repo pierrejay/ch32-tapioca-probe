@@ -20,6 +20,8 @@ constexpr uint8_t kFamilyDiagnostics = 0x7f; // Tapioca-private, never sent by W
 constexpr uint8_t kCtrlIdentify = 0x01;
 constexpr uint8_t kCtrlConnect = 0x02;
 constexpr uint8_t kCtrlHold = 0x03;
+constexpr uint8_t kCtrlPower3v3On = 0x09;
+constexpr uint8_t kCtrlPower3v3Off = 0x0a;
 constexpr uint8_t kCtrlResetLow = 0x13;
 constexpr uint8_t kCtrlStop = 0xff;
 
@@ -228,7 +230,6 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
                 writeDmiReply(tx, 0x00, 0, kStatusError);
                 return {kDmiReplyLen, Status::TruncatedCommand};
             }
-
             const uint8_t reg = rx[3];
             const uint32_t data = (static_cast<uint32_t>(rx[4]) << 24) |
                                   (static_cast<uint32_t>(rx[5]) << 16) |
@@ -305,6 +306,17 @@ Result Core::processPacket(IDmi& port, const uint8_t* rx, size_t rxLength,
 
                 case kCtrlStop:
                     reset(port);
+                    return ack(tx, kFamilyControl, Status::Ok);
+
+                case kCtrlPower3v3On:
+                case kCtrlPower3v3Off:
+                    if (!switchDutOn_)
+                        return ack(tx, kFamilyControl, Status::UnsupportedCommand);
+                    // Park the physical link even if a caller issued raw DMI
+                    // without first establishing a tracked connect session.
+                    port.disconnect();
+                    connected_ = false;
+                    switchDutOn_(rx[3] == kCtrlPower3v3On);
                     return ack(tx, kFamilyControl, Status::Ok);
 
                 case kCtrlHold:

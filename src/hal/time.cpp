@@ -6,6 +6,9 @@ namespace
 {
 volatile uint32_t g_millis = 0;
 bool g_timeInitialized = false;
+#ifdef UART_BRIDGE
+Time::TickHandler volatile g_tickHandler = nullptr;
+#endif
 }
 
 extern "C" void TIM2_IRQHandler(void) INTERRUPT_DECORATOR;
@@ -15,6 +18,10 @@ extern "C" void TIM2_IRQHandler(void)
     {
         ++g_millis;
         TIM2->INTFR = static_cast<uint16_t>(~TIM_UIF);
+#ifdef UART_BRIDGE
+        const Time::TickHandler handler = g_tickHandler;
+        if (handler) handler();
+#endif
     }
 }
 
@@ -40,6 +47,13 @@ void init()
 
     g_timeInitialized = true;
 }
+
+#ifdef UART_BRIDGE
+void setTickHandler(TickHandler handler)
+{
+    g_tickHandler = handler;
+}
+#endif
 
 uint32_t millis()
 {

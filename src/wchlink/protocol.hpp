@@ -42,6 +42,16 @@ struct Result
 class Core
 {
 public:
+    using DutPowerSwitch = void (*)(bool on);
+
+    // Explicit runtime initialization keeps the static firmware instance free
+    // of C++ global-constructor requirements.
+    void init(DutPowerSwitch switchDutOn = nullptr)
+    {
+        switchDutOn_ = switchDutOn;
+        connected_ = false;
+    }
+
     Result processPacket(IDmi& port,
                          const uint8_t* rx,
                          size_t rxLength,
@@ -54,7 +64,8 @@ public:
     void reset(IDmi& port);
 
 private:
-    bool connected_ = false;
+    DutPowerSwitch switchDutOn_;
+    bool connected_;
 };
 
 } // namespace WchLink

@@ -4,7 +4,10 @@
 #include "cmsis_dap.hpp"
 #include "protocol.hpp"
 #include "time.hpp"
-#include "activity_led.hpp"
+#include "board_control.hpp"
+#ifdef UART_BRIDGE
+#include "uart_bridge.hpp"
+#endif
 #include "usb_dirtyjtag.hpp"
 
 // JTAG and SWD may retain ownership until they disconnect or become idle.
@@ -25,16 +28,28 @@ static Ch32Jtag g_jtag;
 static Ch32PiocSwd g_swd;
 static CmsisDap::Core g_dap;
 static UsbDirtyJtag g_usb;
+#ifdef UART_BRIDGE
+static UartBridge g_uart;
+static void requestUartRxDrain() { g_usb.requestUartRxDrain(); }
+#endif
 
 int main(void)
 {
     SystemInit();
     Time::init();
+    BoardControl::init();
+#ifdef UART_BRIDGE
+    g_uart.init();
+#endif
 
     g_swd.init();
     g_jtag.init();
-    g_usb.init();
-    ActivityLed::init();
+#ifdef UART_BRIDGE
+    g_usb.init(&g_uart);
+    Time::setTickHandler(requestUartRxDrain);
+#else
+    g_usb.init(nullptr);
+#endif
 
     // A wire owner silent this long is treated as stale (its client exited
     // without releasing) and may be preempted when the other transport claims.
@@ -52,6 +67,9 @@ int main(void)
     while (1)
     {
         ActivityLed::tick(); // before the idle continue, so the LED updates every loop
+#ifdef UART_BRIDGE
+        if (g_usb.pollCdc()) ActivityLed::notify();
+#endif
 
         bool resetJtag = false;
         bool resetDap = false;

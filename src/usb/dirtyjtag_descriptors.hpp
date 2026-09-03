@@ -9,6 +9,12 @@ constexpr uint16_t kVid = 0x1209;
 constexpr uint16_t kPid = 0xC0CA;
 constexpr uint8_t kEp0Size = 64;
 constexpr uint16_t kPacketSize = 64;
+constexpr uint8_t kMaxPower = 250; // 500 mA in USB's 2 mA units
+constexpr uint8_t kCdcControlInterface = 2;
+constexpr uint8_t kCdcDataInterface = 3;
+constexpr uint8_t kCdcNotifyEndpoint = 5;
+constexpr uint8_t kCdcOutEndpoint = 6;
+constexpr uint8_t kCdcInEndpoint = 7;
 
 enum StringId : uint8_t
 {
@@ -37,7 +43,7 @@ constexpr uint8_t configuration[] =
     // Composite configuration: two independent functions, each wrapped in an
     // Interface Association Descriptor so macOS/Windows instantiate both interfaces
     // on their own - without a libusb SET_CONFIGURATION priming the device first.
-    0x09, 0x02, 0x47, 0x00, 0x02, 0x01, 0x00, 0x80, 0x32,   // wTotalLength = 71
+    0x09, 0x02, 0x47, 0x00, 0x02, 0x01, 0x00, 0x80, kMaxPower, // wTotalLength = 71
     // IAD: function 0 = DirtyJTAG (interface 0, vendor class).
     0x08, 0x0B, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00,
     // Interface 0: DirtyJTAG v2.
@@ -53,6 +59,43 @@ constexpr uint8_t configuration[] =
     0x09, 0x04, 0x01, 0x00, 0x02, 0xFF, 0x00, 0x00, CmsisDapInterface,
     0x07, 0x05, 0x04, 0x02, 0x40, 0x00, 0x01,
     0x07, 0x05, 0x83, 0x02, 0x40, 0x00, 0x01,
+};
+
+constexpr uint8_t configurationWithUart[] =
+{
+    // Composite configuration: three independent functions, each wrapped in an
+    // Interface Association Descriptor so macOS/Windows instantiate all functions
+    // on their own - without a libusb SET_CONFIGURATION priming the device first.
+    0x09, 0x02, 0x89, 0x00, 0x04, 0x01, 0x00, 0x80, kMaxPower, // wTotalLength = 137
+    // IAD: function 0 = DirtyJTAG (interface 0, vendor class).
+    0x08, 0x0B, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00,
+    // Interface 0: DirtyJTAG v2.
+    0x09, 0x04, 0x00, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x00,
+    // EP1 OUT: host -> probe.
+    0x07, 0x05, 0x01, 0x02, 0x40, 0x00, 0x01,
+    // EP2 IN: probe -> host.
+    0x07, 0x05, 0x82, 0x02, 0x40, 0x00, 0x01,
+    // IAD: function 1 = CMSIS-DAP (interface 1, vendor class).
+    0x08, 0x0B, 0x01, 0x01, 0xFF, 0x00, 0x00, CmsisDapInterface,
+    // Interface 1: CMSIS-DAP v2. Endpoint order is mandated by CMSIS-DAP:
+    // bulk OUT first, then bulk IN.
+    0x09, 0x04, 0x01, 0x00, 0x02, 0xFF, 0x00, 0x00, CmsisDapInterface,
+    0x07, 0x05, 0x04, 0x02, 0x40, 0x00, 0x01,
+    0x07, 0x05, 0x83, 0x02, 0x40, 0x00, 0x01,
+
+    // IAD: function 2 = CDC ACM UART bridge (interfaces 2 and 3).
+    0x08, 0x0B, kCdcControlInterface, 0x02, 0x02, 0x02, 0x01, 0x00,
+    // CDC communication interface.
+    0x09, 0x04, kCdcControlInterface, 0x00, 0x01, 0x02, 0x02, 0x01, 0x00,
+    0x05, 0x24, 0x00, 0x10, 0x01, // CDC 1.10 header
+    0x05, 0x24, 0x01, 0x00, kCdcDataInterface, // call management
+    0x04, 0x24, 0x02, 0x02, // ACM: line coding and control-line state
+    0x05, 0x24, 0x06, kCdcControlInterface, kCdcDataInterface, // union
+    0x07, 0x05, (uint8_t)(0x80 | kCdcNotifyEndpoint), 0x03, 0x08, 0x00, 0x10,
+    // CDC data interface: host OUT on EP6, UART data IN on EP7.
+    0x09, 0x04, kCdcDataInterface, 0x00, 0x02, 0x0A, 0x00, 0x00, 0x00,
+    0x07, 0x05, kCdcOutEndpoint, 0x02, 0x40, 0x00, 0x00,
+    0x07, 0x05, (uint8_t)(0x80 | kCdcInEndpoint), 0x02, 0x40, 0x00, 0x00,
 };
 
 constexpr uint8_t lang[] = {0x04, 0x03, 0x09, 0x04};
@@ -84,13 +127,14 @@ constexpr uint8_t cmsisDapInterface[] =
 
 static_assert(sizeof(device) == 18, "invalid USB device descriptor length");
 static_assert(sizeof(configuration) == 71, "invalid USB configuration length");
+static_assert(sizeof(configurationWithUart) == 137, "invalid UART USB configuration length");
 static_assert(sizeof(manufacturer) == manufacturer[0], "invalid manufacturer string length");
 static_assert(sizeof(product) == product[0], "invalid product string length");
 static_assert(sizeof(cmsisDapInterface) == cmsisDapInterface[0], "invalid CMSIS-DAP interface string length");
 
-inline uint16_t configurationLength()
+inline uint16_t configurationLength(const uint8_t* descriptor)
 {
-    return (uint16_t)configuration[2] | ((uint16_t)configuration[3] << 8);
+    return (uint16_t)descriptor[2] | ((uint16_t)descriptor[3] << 8);
 }
 
 } // namespace DirtyJtagUsbDescriptors

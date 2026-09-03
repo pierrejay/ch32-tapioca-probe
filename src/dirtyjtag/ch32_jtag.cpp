@@ -90,7 +90,9 @@ void Ch32Jtag::disconnect()
     configureInput(DJTAG_TMS_PORT, DJTAG_TMS_PIN, GPIO_CFGLR_IN_FLOAT);
     configureInput(DJTAG_TDO_PORT, DJTAG_TDO_PIN, GPIO_CFGLR_IN_FLOAT);
     setSrst(true);
+#ifdef JTAG_TRST
     setTrst(true);
+#endif
 }
 
 void Ch32Jtag::setFrequencyKhz(uint16_t frequencyKhz)
@@ -121,7 +123,18 @@ bool Ch32Jtag::getTdo() const
     return (DJTAG_TDO_PORT->INDR & DJTAG_TDO_PIN) != 0;
 }
 
-void Ch32Jtag::setTrst(bool high) { setResetLine(DJTAG_TRST_PORT, DJTAG_TRST_PIN, high); }
+void Ch32Jtag::setTrst(bool high)
+{
+#ifdef JTAG_TRST
+    setResetLine(DJTAG_TRST_PORT, DJTAG_TRST_PIN, high);
+#else
+    // nTRST is not routed. Assertion enters Test-Logic-Reset through TMS.
+    // Deassertion must not add a clock: SETSIG has already applied the TMS
+    // level requested by the host for the state that should follow reset.
+    if (!high)
+        (void)clock(6, true, false);
+#endif
+}
 void Ch32Jtag::setSrst(bool high) { setResetLine(DJTAG_SRST_PORT, DJTAG_SRST_PIN, high); }
 
 bool Ch32Jtag::pulseClock()

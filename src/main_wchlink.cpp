@@ -3,8 +3,12 @@
 
 #include "ch32_sdk.hpp"
 #include "time.hpp"
-#include "activity_led.hpp"
+#include "board_control.hpp"
 #include "protocol.hpp"
+#ifdef UART_BRIDGE
+#include "scoped_irq_mask.hpp"
+#include "uart_bridge.hpp"
+#endif
 #include "usb_wchlink.hpp"
 
 #if defined(WCH_TRANSPORT_RVSWD)
@@ -41,16 +45,48 @@ int main(void)
 
 static UsbWchLink g_usb;
 static WchPort g_port;
+#ifdef UART_BRIDGE
+static UartBridge g_uart;
+static void requestUartRxDrain() { g_usb.requestUartRxDrain(); }
+#endif
+
+static void switchDutOn(bool enabled)
+{
+    // Park the target-facing UART pins before power-off to avoid back-powering
+    // the target, and restore them only after its rail is back up. The USB IRQ
+    // also drains UART RX, so exclude it while the DMA data path is rebuilt.
+#ifdef UART_BRIDGE
+    ScopedIrqMask usbIrq(USBFS_IRQn);
+    if (!enabled) g_uart.suspend();
+#endif
+    LoadSwitch::enable(enabled);
+#ifdef UART_BRIDGE
+    if (enabled)
+    {
+        // The load switch rises in about 0.6 ms. Keep UART pins isolated until
+        // the target rail is established instead of feeding it through PB0.
+        Delay_Us(1000);
+        g_uart.resume();
+    }
+#endif
+}
+
 static WchLink::Core g_core;
 
 int main(void)
 {
     SystemInit();
     Time::init(); // microsecond clock for the deferred RVSWD inter-frame guard
-
-    g_usb.init();
+    BoardControl::init();
+    g_core.init(switchDutOn);
+#ifdef UART_BRIDGE
+    g_uart.init();
+    g_usb.init(&g_uart);
+    Time::setTickHandler(requestUartRxDrain);
+#else
+    g_usb.init(nullptr);
+#endif
     g_port.init();
-    ActivityLed::init();
 
     uint8_t rx[UsbWchLink::kPacketSize];
     uint8_t tx[UsbWchLink::kPacketSize];
@@ -58,6 +94,9 @@ int main(void)
     while (1)
     {
         ActivityLed::tick(); // before the idle continue, so the LED updates every loop
+#ifdef UART_BRIDGE
+        if (g_usb.pollCdc()) ActivityLed::notify();
+#endif
 
         if (g_usb.takeSessionReset()) g_core.reset(g_port);
 

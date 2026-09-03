@@ -16,8 +16,9 @@ Fabrication files (Gerber, BOM, CPL) can be trivially generated from the EasyEDA
 - CH32X035F8U6 in a 3 x 3 mm QFN package;
 - USB-C receptacle;
 - on-board 3.3 V regulator;
+- reverse-current-protected 500 mA switched 3.3 V target output;
 - activity LED on `PA2`;
-- 5.1 kOhm pull-up on `DIO`;
+- 5.1 kOhm pull-up from `DIO` to the switched target rail;
 - ESD protection on the USB and target-facing debug lines;
 - two alternative through-hole target-connector footprints.
 
@@ -55,7 +56,7 @@ target connector.
 | 1 | `GND` | Common ground |
 | 2 | `CLK` | ARM `SWCLK` / WCH RVSWD clock |
 | 3 | `DIO` | ARM `SWDIO` / WCH `SWDIO` or `SWIO` |
-| 4 | `3V3` | 3.3 V output from the probe |
+| 4 | `3V3` | Switched 3.3 V output from the probe |
 
 The order is also printed on the bottom silkscreen:
 
@@ -64,16 +65,19 @@ The order is also printed on the bottom silkscreen:
 ## Target power
 
 USB VBUS feeds an on-board **RT9080-33GJ5** regulator. Its 3.3 V output powers the
-probe and is connected directly to pin 4 of the target connector, so the probe can
-also power a small target (~600 mA nominal output current).
+probe and reaches pin 4 through a reverse-current-protected load switch, so the
+probe can also power a small target. The 500 mA switch is enabled by default
+through an external pull-up.
 
-> **Warning:** there is no power-path or reverse-current isolation between the
-> probe's 3.3 V rail and the target connector. Do not connect the `3V3` pin when the
-> target is powered from another source.
+Leave target power enabled for normal use, including with a self-powered target:
+the load switch prevents current flowing back into the probe whether or not pin 4
+is connected. Disable it only when the target must be fully isolated. The UART
+pins are then parked, and the 5.1 kOhm DIO pull-up loses power with the switched
+target rail.
 
-No target-current budget is specified yet. It must account for the probe's own
-consumption, regulator dissipation and the thermal limits of this small PCB before
-the 3.3 V output is relied upon for anything beyond a small target.
+The 500 mA switch rating is an upper bound, not a guaranteed target-current
+budget: probe consumption, regulator dissipation and the thermal limits of this
+small PCB must also be considered.
 
 ## Entering boot mode
 

@@ -40,6 +40,10 @@ jobs:
         run: make all
       - name: Build alternate board firmwares
         run: make BOARD=weact jtagswd wchlink
+      - name: Build optional feature variants
+        run: |
+          make UART_BRIDGE=1 wchlink
+          make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 jtagswd
       - name: Build WCH diagnostic profiles
         run: make wchlink-rvswio wchlink-rvswio-emit wchlink-rvswd wchlink-rvswd-emit
       - name: Build the WCH diagnostic reader

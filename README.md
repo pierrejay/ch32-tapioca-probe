@@ -15,7 +15,7 @@ A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVS
 
 ## Why?
 
-- The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**, and you could add a UART bridge, etc. just as easily.
+- The CH32X035 costs around ~€0.25, has a package with minuscule footprint (`F8U6`: QFN 3x3) and needs almost no external parts: a few decoupling caps, optionally one pull-up for the USB bootloader. It's the ideal part to embed a USB debug/bridge probe **directly into a product**.
 - The PIOC (RISC8B coprocessor) is perfect for emulating single- or two-wire protocols deterministically.
 
 ## Tested
@@ -27,14 +27,24 @@ A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD, RVS
 | CH32 | RVSWIO (1-wire) | CH32V003, CH32H417 | minichlink, probe-rs |
 | CH32 | RVSWD (2-wire) | CH32X035, CH32V203, CH32V307 | minichlink, probe-rs |
 
-The reference board's LED on `PA2` flickers while the probe is talking to a
-target.
-
 ## Features
 
-Both firmwares currently act as host-driven transports: the probe executes the timing-critical JTAG, SWD or WCH DMI wire transactions, while OpenOCD, probe-rs or minichlink owns the target-specific flash algorithm. This keeps the firmware small and deterministic and preserves compatibility with existing debugging tools.
+- **Debug transports:** JTAG, ARM SWD and WCH-Link RVSWIO/RVSWD, detailed in the
+  two products below.
+- **UART bridge:** optional native USB CDC ACM on USART4 (`PB0/TX`, `PB1/RX`),
+  enabled with `make UART_BRIDGE=1` and configurable through the host serial port.
+- **Target power:** default-on, reverse-current-protected 500 mA load switch.
+  Switching it off parks UART and removes the DIO pull-up for hard isolation,
+  avoiding parasitic powering of the DUT.
+- **Activity LED:** shows the target-power state and briefly inverts it during
+  debug or UART traffic.
 
-The validated PIOC transports could also become building blocks for more autonomous tools. Example: load a binary into the target from an on-board memory, enabling a standalone field programmer without a PC.
+> **Self-powered DUT:** the load switch protects the probe, so `3V3` may remain
+> connected. In any case, keep target power on to retain UART and DIO functionality.
+
+The debug firmwares are host-driven transports: the probe executes the
+timing-critical wire transactions, while OpenOCD, probe-rs or minichlink owns
+the target-specific flash algorithm.
 
 ### Product 1: JTAG + ARM SWD (USB `1209:C0CA`)
 
@@ -54,8 +64,10 @@ JTAG and SWD share PC18/PC19 (SWJ-DP):
 | JTAG `TMS` / SWD `SWDIO` | **PC19** (PIOC IO1) | shared JTAG/SWD data |
 | JTAG `TDI` | PA7 | JTAG only |
 | JTAG `TDO` | PA6 | JTAG only |
-| `nSRST` / SWD `nRESET` | PB0 | optional recovery |
-| `nTRST` | PB1 | JTAG only |
+| `nSRST` / SWD `nRESET` | PA4 | optional recovery |
+| JTAG `nTRST` | PA5 | `JTAG_TRST=1`; otherwise TMS-emulated |
+| UART `TX` | PB0 | probe to target |
+| UART `RX` | PB1 | target to probe |
 
 #### Notes
 
@@ -98,6 +110,9 @@ One data line, plus a clock for the 2-wire parts:
 |---|---|---|
 | `SWCLK` | **PC18** (PIOC IO0) | 2-wire only |
 | `SWDIO` / `SWIO` | **PC19** (PIOC IO1) | data (1- & 2-wire) |
+| UART `TX` | PB0 | probe to target |
+| UART `RX` | PB1 | target to probe |
+| 3.3 V load-switch enable | PA3 | defaults on through an external pull-up |
 
 #### Notes
 
@@ -107,6 +122,11 @@ One data line, plus a clock for the 2-wire parts:
 
 - Some older `minichlink` builds don't drive direct-DMI. `make minichlink` builds
   the pinned version directly from the ch32fun submodule.
+
+- Target power is controlled with `minichlink -k3 -C linke` (on) and
+  `minichlink -kt -C linke` (off). The `-k` avoids probing an intentionally
+  unpowered target before applying the command. Power control is not yet exposed
+  by the JTAG/SWD firmware.
 
 ## Build & flash
 
@@ -144,6 +164,10 @@ Both products flash through the CH32X035 USB ISP bootloader with
 make flash-jtagswd   # product 1: JTAG + ARM SWD
 make flash-wchlink   # product 2: WCH-Link (auto RVSWIO/RVSWD)
 ```
+
+Firmware options and the product to flash can be selected in the same command,
+for example `make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 flash-jtagswd`.
+`make help` lists every supported build option and tool override.
 
 On Linux, install the included udev rule once to access the CH32X035 ROM USB ISP
 bootloader without `sudo` (the user must belong to the `plugdev` group). Its

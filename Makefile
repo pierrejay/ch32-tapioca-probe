@@ -1,6 +1,22 @@
 PROJECT := tapioca-probe
 PROFILE ?= jtagswd
+
+# Supported firmware options. They may all be passed on the same make command
+# line as the build or flash target; see `make help`.
 BOARD ?= reference
+UART_BRIDGE ?= 0
+JTAG_TRST ?= 0
+
+ifneq ($(UART_BRIDGE),0)
+ifneq ($(UART_BRIDGE),1)
+$(error UART_BRIDGE must be 0 or 1)
+endif
+endif
+ifneq ($(JTAG_TRST),0)
+ifneq ($(JTAG_TRST),1)
+$(error JTAG_TRST must be 0 or 1)
+endif
+endif
 
 ifeq ($(BOARD),reference)
 BOARD_SUFFIX :=
@@ -17,7 +33,10 @@ MINICHLINK_DIR := sdk/ch32fun/minichlink
 MINICHLINK := $(MINICHLINK_DIR)/minichlink
 LINKER_SCRIPT := ldscript/Link_CH32X035_pioc.ld
 BUILD_ROOT := build
-BUILD_NAME := $(PROFILE)$(BOARD_SUFFIX)
+UART_SUFFIX := $(if $(filter 1,$(UART_BRIDGE)),-uart,)
+TRST_SUFFIX := $(if $(filter 1,$(JTAG_TRST)),-trst,)
+FEATURE_SUFFIX := $(UART_SUFFIX)$(TRST_SUFFIX)
+BUILD_NAME := $(PROFILE)$(BOARD_SUFFIX)$(FEATURE_SUFFIX)
 BUILD_DIR := $(BUILD_ROOT)/$(BUILD_NAME)
 TARGET := $(BUILD_DIR)/$(PROJECT)-$(BUILD_NAME)
 
@@ -61,6 +80,12 @@ COMMON_FLAGS := $(CODEGEN_FLAGS) -Wall -Wextra -MMD -MP \
 	-DCH32X035F8 -DCH32X03X -DCH32X03x -DCH32X035 \
 	-DFUNCONF_ENABLE_HPE=1 \
 	-Isrc -Isrc/hal -I$(CH32FUN) $(BOARD_CPPFLAGS) $(EXTRA_CPPFLAGS)
+ifeq ($(UART_BRIDGE),1)
+COMMON_FLAGS += -DUART_BRIDGE=1
+endif
+ifeq ($(JTAG_TRST),1)
+COMMON_FLAGS += -DJTAG_TRST=1
+endif
 CFLAGS := $(COMMON_FLAGS) -std=gnu11
 CXXFLAGS := $(COMMON_FLAGS) -std=gnu++17 -fno-exceptions -fno-rtti \
 	-fno-threadsafe-statics -fno-use-cxa-atexit
@@ -72,6 +97,10 @@ LDLIBS := -lgcc
 COMMON_SOURCES := \
 	src/hal/interrupts.cpp \
 	src/hal/time.cpp
+
+ifeq ($(UART_BRIDGE),1)
+COMMON_SOURCES += src/uart_bridge.cpp
+endif
 
 JTAGSWD_SOURCES := \
 	src/main_jtagswd.cpp \
@@ -103,6 +132,12 @@ else
 $(error Unknown PROFILE '$(PROFILE)'; expected one of: $(VALID_PROFILES))
 endif
 
+ifeq ($(JTAG_TRST),1)
+ifneq ($(PROFILE),jtagswd)
+$(error JTAG_TRST=1 is only valid for the jtagswd firmware)
+endif
+endif
+
 ifneq ($(filter $(PROFILE),wchlink-rvswio wchlink-rvswio-emit),)
 CPPFLAGS_PROFILE += -DWCH_TRANSPORT_RVSWIO
 endif
@@ -130,17 +165,37 @@ all: jtagswd wchlink
 
 help:
 	@printf '%s\n' \
-		'make all             Build both firmwares and host minichlink' \
-		'make jtagswd         Build the JTAG + CMSIS-DAP firmware' \
-		'make wchlink         Build the auto-detecting WCH-Link firmware' \
-		'make flash-jtagswd   Build and flash JTAG/SWD through USB ISP' \
-		'make flash-wchlink   Build and flash WCH-Link through USB ISP' \
-		'make BOARD=weact ... Build a WeAct-board variant using LED PB12' \
-		'make minichlink      Build the pinned host-side minichlink' \
-		'make probe-wchlink   Identify a WCH target through the probe' \
-		'make diagnose-wchlink Read latched WCH transport diagnostics' \
-		'make test            Build and run all host-side tests' \
-		'make verify-pioc     Check that generated PIOC headers are current'
+		'Usage:' \
+		'  make [OPTIONS] <target>' \
+		'' \
+		'Firmware options (defaults shown):' \
+		'  BOARD=reference       reference | weact (WeAct uses LED PB12)' \
+		'  UART_BRIDGE=0          1 adds the PB0/PB1 USB CDC UART bridge' \
+		'  JTAG_TRST=0            1 routes physical JTAG nTRST to PA5 (jtagswd only)' \
+		'  RISCV_PREFIX=<prefix>  override RISC-V toolchain auto-detection' \
+		'  EXTRA_CPPFLAGS=<flags> advanced custom board/compiler definitions' \
+		'' \
+		'Build and flash:' \
+		'  make all               build both default firmwares and host minichlink' \
+		'  make jtagswd           build the JTAG + CMSIS-DAP firmware' \
+		'  make wchlink           build the auto-detecting WCH-Link firmware' \
+		'  make flash-jtagswd     build and flash JTAG/SWD through USB ISP' \
+		'  make flash-wchlink     build and flash WCH-Link through USB ISP' \
+		'  make BOARD=weact UART_BRIDGE=1 JTAG_TRST=1 flash-jtagswd' \
+		'' \
+		'Other targets:' \
+		'  make minichlink        build the pinned host-side minichlink' \
+		'  make probe-wchlink     identify a WCH target through the probe' \
+		'  make diagnose-wchlink  read latched WCH transport diagnostics' \
+		'  make test              build and run all host-side tests' \
+		'  make verify-pioc       check that generated PIOC headers are current' \
+		'  make regenerate-pioc   regenerate PIOC headers from their ASM sources' \
+		'  make clean             remove all generated build files' \
+		'' \
+		'Supported tool/action overrides:' \
+		'  WCHISP=<command> PYTHON=<command> HOST_CC=<command> HOST_CXX=<command>' \
+		'  HOST_CXXFLAGS=<flags> LIBUSB_CFLAGS=<flags> LIBUSB_LIBS=<flags>' \
+		'  SERIAL=<serial> DIAG_ARGS=<arguments>   (diagnose-wchlink only)'
 
 jtagswd $(WCH_PROFILES):
 	@$(MAKE) --no-print-directory PROFILE=$@ firmware
@@ -187,10 +242,10 @@ regenerate-pioc:
 	@for source in $(PIOC_ASM); do $(PYTHON) pioc/assemble.py $$source --write || exit; done
 
 flash-jtagswd: jtagswd
-	$(WCHISP) flash $(BUILD_ROOT)/jtagswd$(BOARD_SUFFIX)/$(PROJECT)-jtagswd$(BOARD_SUFFIX).bin
+	$(WCHISP) flash $(BUILD_ROOT)/jtagswd$(BOARD_SUFFIX)$(FEATURE_SUFFIX)/$(PROJECT)-jtagswd$(BOARD_SUFFIX)$(FEATURE_SUFFIX).bin
 
 flash-wchlink: wchlink
-	$(WCHISP) flash $(BUILD_ROOT)/wchlink$(BOARD_SUFFIX)/$(PROJECT)-wchlink$(BOARD_SUFFIX).bin
+	$(WCHISP) flash $(BUILD_ROOT)/wchlink$(BOARD_SUFFIX)$(FEATURE_SUFFIX)/$(PROJECT)-wchlink$(BOARD_SUFFIX)$(FEATURE_SUFFIX).bin
 
 minichlink: check-submodules
 	$(MAKE) -C $(MINICHLINK_DIR) minichlink
@@ -211,7 +266,8 @@ $(WCHLINK_DIAG): sdk/wchlink_diag.c
 	$(HOST_CC) -std=c11 -O2 -Wall -Wextra $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) -o $@
 
 HOST_TESTS := packet_order_test pioc_swd_protocol_test wch_rvswd_frame_test \
-	wch_link_fixtures_test cmsis_dap_test protocol_test wch_link_protocol_test
+	wch_link_fixtures_test cmsis_dap_test protocol_test wch_link_protocol_test \
+	usb_descriptors_test
 HOST_TEST_BINS := $(addprefix $(BUILD_ROOT)/tests/,$(HOST_TESTS))
 HOST_TEST_OBJECTS := \
 	$(addprefix $(BUILD_ROOT)/tests/obj/tests/,$(addsuffix .o,$(HOST_TESTS))) \
@@ -233,6 +289,7 @@ $(BUILD_ROOT)/tests/protocol_test: $(BUILD_ROOT)/tests/obj/tests/protocol_test.o
 	$(BUILD_ROOT)/tests/obj/src/dirtyjtag/protocol.o
 $(BUILD_ROOT)/tests/wch_link_protocol_test: $(BUILD_ROOT)/tests/obj/tests/wch_link_protocol_test.o \
 	$(BUILD_ROOT)/tests/obj/src/wchlink/protocol.o
+$(BUILD_ROOT)/tests/usb_descriptors_test: $(BUILD_ROOT)/tests/obj/tests/usb_descriptors_test.o
 
 $(HOST_TEST_BINS):
 	@mkdir -p $(@D)

@@ -11,6 +11,12 @@ constexpr uint16_t kVid = 0x1a86;
 constexpr uint16_t kPid = 0x8010;
 constexpr uint8_t kEp0Size = 64;
 constexpr uint16_t kPacketSize = 64;
+constexpr uint8_t kMaxPower = 250; // 500 mA in USB's 2 mA units
+constexpr uint8_t kCdcControlInterface = 1;
+constexpr uint8_t kCdcDataInterface = 2;
+constexpr uint8_t kCdcNotifyEndpoint = 5;
+constexpr uint8_t kCdcOutEndpoint = 6;
+constexpr uint8_t kCdcInEndpoint = 7;
 
 enum StringId : uint8_t
 {
@@ -33,16 +39,53 @@ constexpr uint8_t device[] =
     0x01,                   // one configuration
 };
 
+constexpr uint8_t deviceWithUart[] =
+{
+    0x12, 0x01,             // bLength, DEVICE
+    0x10, 0x01,             // USB 1.10
+    0xEF, 0x02, 0x01,       // Miscellaneous / Common Class / IAD composite
+    kEp0Size,
+    (uint8_t)kVid, (uint8_t)(kVid >> 8),
+    (uint8_t)kPid, (uint8_t)(kPid >> 8),
+    0x00, 0x01,             // bcdDevice 1.00
+    Manufacturer, Product, Serial,
+    0x01,                   // one configuration
+};
+
 constexpr uint8_t configuration[] =
 {
     // Single vendor interface: one bulk OUT + one bulk IN endpoint.
-    0x09, 0x02, 0x20, 0x00, 0x01, 0x01, 0x00, 0x80, 0x32,
+    0x09, 0x02, 0x20, 0x00, 0x01, 0x01, 0x00, 0x80, kMaxPower,
     // Interface 0: vendor-specific, 2 endpoints.
     0x09, 0x04, 0x00, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x00,
     // EP1 OUT: host -> probe, bulk, 64.
     0x07, 0x05, 0x01, 0x02, 0x40, 0x00, 0x00,
     // EP1 IN: probe -> host, bulk, 64.
     0x07, 0x05, 0x81, 0x02, 0x40, 0x00, 0x00,
+};
+
+constexpr uint8_t configurationWithUart[] =
+{
+    // WCH-Link vendor interface plus a CDC ACM UART function.
+    0x09, 0x02, 0x62, 0x00, 0x03, 0x01, 0x00, 0x80, kMaxPower,
+    // Interface 0: vendor-specific, 2 endpoints.
+    0x09, 0x04, 0x00, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x00,
+    // EP1 OUT: host -> probe, bulk, 64.
+    0x07, 0x05, 0x01, 0x02, 0x40, 0x00, 0x00,
+    // EP1 IN: probe -> host, bulk, 64.
+    0x07, 0x05, 0x81, 0x02, 0x40, 0x00, 0x00,
+
+    // CDC ACM UART bridge (interfaces 1 and 2).
+    0x08, 0x0B, kCdcControlInterface, 0x02, 0x02, 0x02, 0x01, 0x00,
+    0x09, 0x04, kCdcControlInterface, 0x00, 0x01, 0x02, 0x02, 0x01, 0x00,
+    0x05, 0x24, 0x00, 0x10, 0x01,
+    0x05, 0x24, 0x01, 0x00, kCdcDataInterface,
+    0x04, 0x24, 0x02, 0x02,
+    0x05, 0x24, 0x06, kCdcControlInterface, kCdcDataInterface,
+    0x07, 0x05, (uint8_t)(0x80 | kCdcNotifyEndpoint), 0x03, 0x08, 0x00, 0x10,
+    0x09, 0x04, kCdcDataInterface, 0x00, 0x02, 0x0A, 0x00, 0x00, 0x00,
+    0x07, 0x05, kCdcOutEndpoint, 0x02, 0x40, 0x00, 0x00,
+    0x07, 0x05, (uint8_t)(0x80 | kCdcInEndpoint), 0x02, 0x40, 0x00, 0x00,
 };
 
 constexpr uint8_t lang[] = {0x04, 0x03, 0x09, 0x04};
@@ -64,13 +107,15 @@ constexpr uint8_t product[] =
 // usb_serial.hpp and the Desc::Serial case in usb_wchlink.cpp.
 
 static_assert(sizeof(device) == 18, "invalid USB device descriptor length");
+static_assert(sizeof(deviceWithUart) == 18, "invalid composite USB device descriptor length");
 static_assert(sizeof(configuration) == 32, "invalid USB configuration length");
+static_assert(sizeof(configurationWithUart) == 98, "invalid UART USB configuration length");
 static_assert(sizeof(manufacturer) == manufacturer[0], "invalid manufacturer string length");
 static_assert(sizeof(product) == product[0], "invalid product string length");
 
-inline uint16_t configurationLength()
+inline uint16_t configurationLength(const uint8_t* descriptor)
 {
-    return (uint16_t)configuration[2] | ((uint16_t)configuration[3] << 8);
+    return (uint16_t)descriptor[2] | ((uint16_t)descriptor[3] << 8);
 }
 
 } // namespace WchLinkUsbDescriptors

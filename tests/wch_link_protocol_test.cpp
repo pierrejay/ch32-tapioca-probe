@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <type_traits>
 
 #include "wchlink/protocol.hpp"
 #include "wch_link_fixtures.hpp"
@@ -11,6 +12,21 @@ namespace F = WchLinkFixtures;
 using WchLink::DmiStatus;
 using WchLink::DmiOperation;
 using WchLink::DmiTransport;
+
+static_assert(std::is_trivially_default_constructible<WchLink::Core>::value,
+              "firmware Core must not require C++ global constructors");
+
+namespace
+{
+bool targetPowerEnabled = true;
+unsigned targetPowerCalls = 0;
+
+void switchDutOn(bool enabled)
+{
+    targetPowerEnabled = enabled;
+    ++targetPowerCalls;
+}
+}
 
 // Configurable fake DMI transport (same role as FakeJtag in protocol_test.cpp).
 class FakeDmiPort final : public WchLink::IDmi
@@ -71,6 +87,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         uint8_t guarded[] = {0xa5, 0xa5, 0xa5, 0xa5, 0xa5};
 
         auto r = core.processPacket(port, F::kIdentifyReq, sizeof(F::kIdentifyReq),
@@ -94,6 +111,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         memset(tx, 0xaa, sizeof(tx));
         const auto r = core.processPacket(port, F::kIdentifyReq, sizeof(F::kIdentifyReq), tx, sizeof(tx));
         assert(r.status == WchLink::Status::Ok);
@@ -106,12 +124,45 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(r.responseLength == sizeof(F::kConnectReply));
         assert(port.connectCalls == 1);
         assert(port.readCalls == 1 && port.lastReadAddr == 0x7f);
         assert(core.connected());
         assert(memcmp(tx, F::kConnectReply, r.responseLength) == 0);
+    }
+
+    // ---- Power commands do not infer whether an externally powered DUT is alive ----
+    {
+        FakeDmiPort port;
+        WchLink::Core core;
+        core.init(switchDutOn);
+        targetPowerEnabled = true;
+        targetPowerCalls = 0;
+
+        auto r = core.processPacket(port, F::kPowerOffReq, sizeof(F::kPowerOffReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::Ok);
+        assert(memcmp(tx, F::kPowerOffReply, sizeof(F::kPowerOffReply)) == 0);
+        assert(!targetPowerEnabled && targetPowerCalls == 1);
+
+        r = core.processPacket(port, F::kDmiReadReq, sizeof(F::kDmiReadReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::Ok);
+        assert(port.readCalls == 1 && !F::dmiReplyIsError(tx, (uint8_t)r.responseLength));
+
+        r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::Ok);
+        assert(port.connectCalls == 1 && core.connected());
+
+        r = core.processPacket(port, F::kPowerOnReq, sizeof(F::kPowerOnReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::Ok);
+        assert(memcmp(tx, F::kPowerOnReply, sizeof(F::kPowerOnReply)) == 0);
+        assert(targetPowerEnabled && targetPowerCalls == 2);
+
+        WchLink::Core unsupported;
+        unsupported.init();
+        r = unsupported.processPacket(port, F::kPowerOffReq, sizeof(F::kPowerOffReq), tx, sizeof(tx));
+        assert(r.status == WchLink::Status::UnsupportedCommand);
     }
 
     // ---- target identity selects the family and is returned big-endian ---------
@@ -147,6 +198,7 @@ int main()
             FakeDmiPort port;
             port.readValue = identity.chipId;
             WchLink::Core core;
+            core.init();
             const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
             assert(r.status == WchLink::Status::Ok);
             assert(r.responseLength == 8);
@@ -164,6 +216,7 @@ int main()
         FakeDmiPort port;
         port.connectResult = false;
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(r.status == WchLink::Status::TargetUnavailable);
         assert(r.responseLength == sizeof(F::kConnectErrorReply));
@@ -177,6 +230,7 @@ int main()
         FakeDmiPort port;
         port.readStatus = DmiStatus::Timeout;
         WchLink::Core core;
+        core.init();
         auto r = core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(r.status == WchLink::Status::TargetUnavailable);
         assert(port.disconnectCalls == 1 && !core.connected());
@@ -184,6 +238,7 @@ int main()
         port = FakeDmiPort{};
         port.readValue = 0xdeadbeef;
         WchLink::Core otherCore;
+        otherCore.init();
         r = otherCore.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(r.status == WchLink::Status::TargetUnavailable);
         assert(port.disconnectCalls == 1 && !otherCore.connected());
@@ -194,6 +249,7 @@ int main()
         FakeDmiPort port;
         port.readValue = F::dmiReplyData(F::kDmiReadReply); // 0x00030382
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kDmiReadReq, sizeof(F::kDmiReadReq), tx, sizeof(tx));
         assert(r.status == WchLink::Status::Ok);
         assert(r.responseLength == 9);
@@ -206,6 +262,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kDmiWriteReq, sizeof(F::kDmiWriteReq), tx, sizeof(tx));
         assert(r.responseLength == 9);
         assert(port.writeCalls == 1);
@@ -220,6 +277,7 @@ int main()
         FakeDmiPort port;
         port.readStatus = DmiStatus::Timeout;
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kDmiReadReq, sizeof(F::kDmiReadReq), tx, sizeof(tx));
         assert(r.responseLength == 9);
         assert(F::dmiReplyIsError(tx, (uint8_t)r.responseLength));
@@ -230,6 +288,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         const auto r = core.processPacket(port, F::kDmiReadReq, 5, tx, sizeof(tx)); // 4 bytes short
         assert(r.status == WchLink::Status::TruncatedCommand);
         assert(r.responseLength >= 1);
@@ -240,6 +299,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         core.processPacket(port, F::kConnectReq, sizeof(F::kConnectReq), tx, sizeof(tx));
         assert(core.connected());
         const auto r = core.processPacket(port, F::kStopReq, sizeof(F::kStopReq), tx, sizeof(tx));
@@ -270,6 +330,7 @@ int main()
         port.diagnostics.timeouts = 8;
 
         WchLink::Core core;
+        core.init();
         const uint8_t query[] = {0x81, 0x7f, 0x01, 0x00};
         auto r = core.processPacket(port, query, sizeof(query), tx, sizeof(tx));
         assert(r.status == WchLink::Status::Ok && r.responseLength == 43);
@@ -295,6 +356,7 @@ int main()
     {
         FakeDmiPort port;
         WchLink::Core core;
+        core.init();
         const uint8_t unknown[] = {0x81, 0x99, 0x00};
         const auto r = core.processPacket(port, unknown, sizeof(unknown), tx, sizeof(tx));
         assert(r.status == WchLink::Status::UnsupportedCommand);
@@ -309,6 +371,7 @@ int main()
         {
             FakeDmiPort port;
             WchLink::Core core;
+            core.init();
             const F::Fixture& f = F::kAll[i];
             const auto r = core.processPacket(port, f.request, f.requestLen, tx, sizeof(tx));
             assert(r.responseLength >= 1);

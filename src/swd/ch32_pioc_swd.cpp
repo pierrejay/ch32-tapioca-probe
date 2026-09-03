@@ -1,4 +1,5 @@
 #include "ch32_pioc_swd.hpp"
+#include "board_config.hpp"
 #include "pioc_swd_protocol.hpp"
 #include "time.hpp"
 
@@ -65,7 +66,7 @@ void Ch32PiocSwd::configureInput(GPIO_TypeDef* port, uint32_t pin)
 
 void Ch32PiocSwd::init()
 {
-    RCC->APB2PCENR |= RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC |
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC |
                       RCC_APB2Periph_AFIO;
     RCC->AHBPCENR |= RCC_AHBPeriph_IO2W;
     AFIO->PCFR1 = (AFIO->PCFR1 & ~AFIO_PCFR1_SWJ_CFG) | AFIO_PCFR1_SWJ_CFG_DISABLE;
@@ -277,12 +278,12 @@ void Ch32PiocSwd::delayUs(uint32_t microseconds)
 void Ch32PiocSwd::setReset(bool high)
 {
     // Open-drain emulation: never source the target reset rail.
-    if (high) configureInput(GPIOB, GPIO_Pin_0);
+    if (high) configureInput(TARGET_RESET_PORT, TARGET_RESET_PIN);
     else
     {
-        GPIOB->BCR = GPIO_Pin_0;
-        configureOutput(GPIOB, GPIO_Pin_0);
-        GPIOB->BCR = GPIO_Pin_0;
+        TARGET_RESET_PORT->BCR = TARGET_RESET_PIN;
+        configureOutput(TARGET_RESET_PORT, TARGET_RESET_PIN);
+        TARGET_RESET_PORT->BCR = TARGET_RESET_PIN;
     }
 }
 
@@ -298,7 +299,7 @@ bool Ch32PiocSwd::getData() const
 
 bool Ch32PiocSwd::getReset() const
 {
-    return (GPIOB->INDR & GPIO_Pin_0) != 0;
+    return (TARGET_RESET_PORT->INDR & TARGET_RESET_PIN) != 0;
 }
 
 void Ch32PiocSwd::recordAck(uint8_t ack)

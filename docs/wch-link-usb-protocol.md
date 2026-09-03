@@ -49,6 +49,11 @@ The machine-usable request/reply byte arrays live in
 `LEResetInterface`/`LESetupInterface`, `pgm-wch-linke.c:355,382,450`. Called with
 `reply=NULL` → content **[I]**, but a non-empty reply is mandatory (see transport).
 
+### `81 0d 01 09` / `81 0d 01 0a` — target 3.3 V on / off
+`LEControl3v3`, `pgm-wch-linke.c`. These are the stock LinkE commands used by
+minichlink `-3` and `-t`. The probe releases any active DMI session before
+changing the power-switch state and always sends the mandatory non-empty reply.
+
 ### `81 0d 01 02` — connect / detect target
 `pgm-wch-linke.c:370,374,429,435`. Reply carries the family and four-byte chip ID:
 - retry if `transferred == 4` **[V-length]**, or if reply starts `81 55 01` **[V]**
