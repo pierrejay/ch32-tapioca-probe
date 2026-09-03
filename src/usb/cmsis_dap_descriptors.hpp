@@ -5,10 +5,10 @@
 namespace CmsisDapUsbDescriptors
 {
 
-// Temporary development identity. Replace it with the project's assigned
-// VID/PID before distributing the probe.
-constexpr uint16_t kVid = 0x1209;
-constexpr uint16_t kPid = 0xC0CA;
+// Temporary compatibility identity from Arm's CMSIS-DAP v2 example. It is not
+// allocated to this project and must be replaced by the project's own VID/PID.
+constexpr uint16_t kVid = 0xc251;
+constexpr uint16_t kPid = 0xf000;
 constexpr uint8_t kEp0Size = 64;
 constexpr uint16_t kPacketSize = 64;
 constexpr uint8_t kMaxPower = 250; // 500 mA in USB's 2 mA units

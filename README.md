@@ -3,7 +3,7 @@
 Two build-time USB debug-probe firmwares for CH32X035:
 
 1. **CMSIS-DAP SWD + JTAG**: an ARM debug probe for OpenOCD and probe-rs.
-2. **WCH-Link**: a WCH-LinkE-like probe for CH32 RISC-V, both single-wire **RVSWIO** and two-wire **RVSWD**, driven by stock `minichlink`. Auto-detects RVSWIO vs RVSWD per target.
+2. **WCH-Link**: a WCH-LinkE-like probe for CH32 RISC-V, both single-wire **RVSWIO** and two-wire **RVSWD**, driven by stock minichlink or probe-rs. Auto-detects RVSWIO vs RVSWD per target.
 
 The ~€0.25 CH32X035 needs few external parts and fits in a 3 x 3 mm QFN;
 its PIOC coprocessor nicely handles the timing-critical single- and two-wire protocols,
@@ -32,27 +32,25 @@ WCH RVSWIO & RVSWD) is also provided with EasyEDA & KiCad source files.
 - **Debug transports:** ARM SWD/JTAG and WCH-Link RVSWIO/RVSWD, detailed in the
   two products below.
 - **UART bridge:** optional native USB CDC ACM on USART4 (`PB0/TX`, `PB1/RX`),
-  enabled with `make UART_BRIDGE=1` and configurable through the host serial port.
+  exposed as a second USB function, enabled with `make UART_BRIDGE=1` and
+  configurable through the host serial port.
 - **Target power:** optional load switch controlled through `PA3`; host control is
   currently available with the WCH-Link firmware.
-  Switching it off parks UART pins, avoiding parasitic powering of the DUT.
+  Switching it off releases the WCH interface and parks UART pins, avoiding
+  parasitic powering of the DUT. With a self-powered DUT, `3V3` may remain
+  connected; keep target power switched on to retain WCH and UART functionality.
 - **Activity LED:** shows the target-power state and blinks during debug or UART
   traffic.
-
-> **Self-powered DUT:** the load switch protects the probe, so `3V3` may remain
-> connected. In any case, keep target power on to retain UART functionality.
 
 The debug firmwares are host-driven transports: the probe executes the
 timing-critical wire transactions, while OpenOCD, probe-rs or minichlink owns
 the target-specific flash algorithm.
 
-### Product 1: CMSIS-DAP SWD + JTAG (USB `1209:C0CA`)
+### Product 1: CMSIS-DAP SWD + JTAG (USB `C251:F000`)
 
 The firmware exposes one **CMSIS-DAP v2** bulk interface for ARM SWD and JTAG
 with OpenOCD and probe-rs. `DAP_Connect(0)` selects SWD by default; explicit
-`DAP_Connect(1)` and `DAP_Connect(2)` select SWD and JTAG respectively. An
-optional CDC ACM UART bridge is exposed as a second USB function when built
-with `UART_BRIDGE=1`.
+`DAP_Connect(1)` and `DAP_Connect(2)` select SWD and JTAG respectively.
 
 #### Pinout
 
@@ -67,8 +65,8 @@ PCB routes only the shared SWD pins:
 | JTAG `TDO` | PA6 | |
 | `nSRST` / SWD `nRESET` | PA4 | optional recovery |
 | JTAG `nTRST` | PA5 | optional (needs `JTAG_TRST=1`); otherwise PA5 is free |
-| UART `TX` | PB0 | probe to target |
-| UART `RX` | PB1 | target to probe |
+| UART `TX` | PB0 | probe to target (needs `UART_BRIDGE=1`) |
+| UART `RX` | PB1 | target to probe (needs `UART_BRIDGE=1`) |
 
 #### Notes
 
@@ -85,16 +83,15 @@ PCB routes only the shared SWD pins:
 
 - Select the transport explicitly in the host (`--protocol swd|jtag` with
   probe-rs, or `transport select swd|jtag` with OpenOCD). SWD remains the probe's
-  default when the host does not choose. SWJ mode-switch handling varies between
-  host tools and versions: OpenOCD 0.12 assumes a target is already in JTAG when
-  starting directly in JTAG, while probe-rs actively switches it. If another
-  tool leaves the target in SWD, run and cleanly close an OpenOCD SWD session or
-  power-cycle the target before starting OpenOCD JTAG.
+  default when the host does not choose. On `DAP_Connect(JTAG)`, the probe emits
+  the standard SWD-to-JTAG sequence so hosts such as OpenOCD 0.12 also work when
+  another tool left the target in normal SWD. This best-effort transition does
+  not wake a target left in the dormant state.
 
 - `probe-rs info --protocol swd` can pause for about ten seconds after finding a
-  valid DPv2 target because an upstream discovery regression also probes two
-  RP2040 multidrop addresses. This is a probe-rs quirk, not a Tapioca transport
-  timeout; normal target-specific attach and flashing are unaffected.
+  valid DPv2 target because it deliberately probes two RP2040 multidrop
+  addresses. This is a probe-rs discovery quirk, not a Tapioca transport timeout;
+  normal target-specific attach and flashing are unaffected.
 
 - Full run-control debugging works with both SWD and JTAG, not just flashing.
   RTT also works over SWD (`OpenOCD rtt` or `defmt`/probe-rs): it uses ordinary
@@ -135,8 +132,8 @@ One data line, plus a clock for the 2-wire parts:
 |---|---|---|
 | `SWCLK` | **PC18** (PIOC IO0) | 2-wire only |
 | `SWDIO` / `SWIO` | **PC19** (PIOC IO1) | data (1- & 2-wire) |
-| UART `TX` | PB0 | probe to target |
-| UART `RX` | PB1 | target to probe |
+| UART `TX` | PB0 | probe to target (needs `UART_BRIDGE=1`) |
+| UART `RX` | PB1 | target to probe (needs `UART_BRIDGE=1`) |
 | `PWREN` | PA3 | target 3.3V load switch (optional, defaults on) |
 
 #### Notes
@@ -195,19 +192,19 @@ make flash-wchlink   # product 2: WCH-Link (auto RVSWIO/RVSWD)
 ```
 
 Firmware options and the product to flash can be selected in the same command,
-for example `make BOARD=weact UART_BRIDGE=1 flash-jtagswd`.
+for example `make UART_BRIDGE=1 JTAG_TRST=1 flash-jtagswd`.
 `make help` lists every supported build option and tool override.
 
-On Linux, install the included udev rule once to access the CH32X035 ROM USB ISP
-bootloader without `sudo` (the user must belong to the `plugdev` group). Its
-VID/PID is independent of the identity used by the probe firmware:
+On Linux, install the included udev rules once to access the CH32X035 ROM USB
+ISP bootloader and the CMSIS-DAP development identity without `sudo` (the user
+must belong to the `plugdev` group):
 
 ```sh
 sudo install -m 0644 udev/50-ch32-tapioca-probe.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 ```
 
-Unplug and reconnect the probe in bootloader mode after installing the rule.
+Unplug and reconnect the probe after installing the rules.
 
 Run the native unit tests with `make test`. See `make help` for the common
 targets. PC18/PC19 are the CH32X035's own SDI debug pins, so the probe itself is
@@ -215,19 +212,16 @@ flashed over USB ISP, not SWD.
 
 ## USB identity: disclaimer
 
-Both firmwares temporarily borrow **VID/PIDs assigned to other projects/vendors**
-(`1209:C0CA` and WCH-LinkE's `1a86:8010`). CMSIS-DAP hosts discover product 1
-through its interface string; the WCH identity lets stock minichlink discover
-product 2. This is a development convenience for an experimental,
-non-commercial project.
+The CMSIS-DAP firmware temporarily borrows `C251:F000`, the Keil/Arm identity
+used by the [CMSIS-DAP v2 example configuration](https://arm-software.github.io/CMSIS_5/DAP/html/group__DAP__ConfigUSB__gr.html).
+It is not allocated to this project; CMSIS-DAP hosts identify the interface
+through its `CMSIS-DAP v2` string rather than a project-specific PID.
 
-⚠️ **These identities are not ours**: this is not an official WCH or Arm product.
-If you build on this, assign a real USB identity (e.g. a
-[pid.codes](https://pid.codes) allocation) before distributing anything.
+The WCH-Link firmware still borrows WCH-LinkE's `1a86:8010` identity so stock
+minichlink can discover it. This is not an official WCH, Keil or Arm product.
 
-A `pid.codes` allocation is planned for the reference probe. Until it is assigned
-and host-tool compatibility has been checked, the borrowed identities remain for
-development use only.
+A dedicated [pid.codes](https://pid.codes) allocation is planned. Replace these
+development identities before distributing anything built on this.
 
 ## Credits
 
