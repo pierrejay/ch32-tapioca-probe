@@ -1,5 +1,6 @@
 #include "usb_cmsis_dap.hpp"
 #include "cmsis_dap_descriptors.hpp"
+#include "scoped_irq_mask.hpp"
 #include "usb_serial.hpp"
 #include "time.hpp"
 #ifdef UART_BRIDGE
@@ -229,9 +230,11 @@ bool UsbCmsisDap::pollCdc()
 #ifndef UART_BRIDGE
     return false;
 #else
-    if (!uart_ || !configured_) return false;
+    if (!uart_) return false;
 
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
+    if (!configured_) return false;
+
     bool activity = cdcActivityPending_;
     cdcActivityPending_ = false;
 
@@ -262,7 +265,6 @@ bool UsbCmsisDap::pollCdc()
         }
     }
 
-    NVIC_EnableIRQ(USBFS_IRQn);
     return activity;
 #endif
 }
@@ -288,7 +290,7 @@ void UsbCmsisDap::armOut()
 bool UsbCmsisDap::takeNextPacket(uint8_t* destination, size_t& length)
 {
     bool available = false;
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     if (packetPending_ && !packetTaken_)
     {
         length = pendingLength_;
@@ -296,20 +298,18 @@ bool UsbCmsisDap::takeNextPacket(uint8_t* destination, size_t& length)
         packetTaken_ = true;
         available = true;
     }
-    NVIC_EnableIRQ(USBFS_IRQn);
     return available;
 }
 
 bool UsbCmsisDap::takeSessionReset()
 {
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     const uint32_t now = Time::millis();
     const bool reset = sessionResetPending_ ||
         (txBusy_ &&
          (uint32_t)(now - txStartedMs_) >= kAbandonedReplyTimeoutMs);
     sessionResetPending_ = false;
     if (reset) resetCmsisDapEndpoints(false, false);
-    NVIC_EnableIRQ(USBFS_IRQn);
     return reset;
 }
 
@@ -318,7 +318,7 @@ bool UsbCmsisDap::finish(const uint8_t* response, size_t length)
     if (length > kPacketSize) return false;
 
     bool accepted = false;
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     if (packetPending_ && packetTaken_ && !txBusy_)
     {
         packetPending_ = false;
@@ -343,7 +343,6 @@ bool UsbCmsisDap::finish(const uint8_t* response, size_t length)
         }
         accepted = true;
     }
-    NVIC_EnableIRQ(USBFS_IRQn);
     return accepted;
 }
 

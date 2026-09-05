@@ -1,5 +1,6 @@
 #include "usb_wchlink.hpp"
 #include "wchlink_descriptors.hpp"
+#include "scoped_irq_mask.hpp"
 #include "usb_serial.hpp"
 #include "time.hpp"
 #ifdef UART_BRIDGE
@@ -230,9 +231,11 @@ bool UsbWchLink::pollCdc()
 #ifndef UART_BRIDGE
     return false;
 #else
-    if (!uart_ || !configured_) return false;
+    if (!uart_) return false;
 
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
+    if (!configured_) return false;
+
     bool activity = cdcActivityPending_;
     cdcActivityPending_ = false;
     if (!controlOutStatusPending_ && cdcOutPending_ &&
@@ -262,7 +265,6 @@ bool UsbWchLink::pollCdc()
         }
     }
 
-    NVIC_EnableIRQ(USBFS_IRQn);
     return activity;
 #endif
 }
@@ -288,7 +290,7 @@ void UsbWchLink::armOut()
 bool UsbWchLink::takeNextPacket(uint8_t* destination, size_t& length)
 {
     bool available = false;
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     if (packetPending_ && !packetTaken_)
     {
         length = pendingLength_;
@@ -296,14 +298,13 @@ bool UsbWchLink::takeNextPacket(uint8_t* destination, size_t& length)
         packetTaken_ = true;
         available = true;
     }
-    NVIC_EnableIRQ(USBFS_IRQn);
     return available;
 }
 
 bool UsbWchLink::takeSessionReset()
 {
     bool pending;
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     const bool replyTimedOut = txBusy_ &&
         (uint32_t)(Time::millis() - txStartedMs_) >= kAbandonedReplyTimeoutMs;
     pending = sessionResetPending_ || replyTimedOut;
@@ -312,7 +313,6 @@ bool UsbWchLink::takeSessionReset()
     {
         resetEp1(false, false);
     }
-    NVIC_EnableIRQ(USBFS_IRQn);
     return pending;
 }
 
@@ -321,7 +321,7 @@ bool UsbWchLink::finish(const uint8_t* response, size_t length)
     if (length == 0 || length > kPacketSize) return false;
 
     bool accepted = false;
-    NVIC_DisableIRQ(USBFS_IRQn);
+    ScopedIrqMask usbIrq(USBFS_IRQn);
     if (packetPending_ && packetTaken_ && !txBusy_)
     {
         packetPending_ = false;
@@ -342,7 +342,6 @@ bool UsbWchLink::finish(const uint8_t* response, size_t length)
         txStartedMs_ = Time::millis();
         accepted = true;
     }
-    NVIC_EnableIRQ(USBFS_IRQn);
     return accepted;
 }
 
