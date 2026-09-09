@@ -3,11 +3,11 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(property "Reference" "LED4"
+	(property "Reference" "REF**"
 		(at -1.827 -0.955 0)
 		(layer "F.SilkS")
 		(hide yes)
-		(uuid "bc677376-0576-4d2d-92f4-15e690f16462")
+		(uuid "b656a6a0-f9c6-48ae-9574-9d9e6c0fa933")
 		(effects
 			(font
 				(size 0.686 0.6285)
@@ -16,10 +16,10 @@
 			(justify left bottom)
 		)
 	)
-	(property "Value" ""
+	(property "Value" "LED-SMD_L1.6-W0.8-R-RD"
 		(at 0 0 0)
 		(layer "F.Fab")
-		(uuid "176e1404-f3f7-4f55-ae31-dde4da82cae2")
+		(uuid "8f2b8c16-7231-45b1-a4b0-4eddfa9d4572")
 		(effects
 			(font
 				(size 1 1)
@@ -31,7 +31,7 @@
 		(at 0 0 0)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "7a3ad465-1486-4fe5-94e9-8e13db84bc39")
+		(uuid "84b3111b-eba0-4b61-8c02-0d6c63956544")
 		(effects
 			(font
 				(size 1 1)
@@ -43,7 +43,7 @@
 		(at 0 0 0)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "7351ee5d-08a3-4393-a3c1-ce6355d93776")
+		(uuid "b85b4e02-88bd-4877-b621-ffe45d86ffda")
 		(effects
 			(font
 				(size 1 1)
@@ -55,7 +55,7 @@
 		(at 0 0 0)
 		(layer "Cmts.User")
 		(hide yes)
-		(uuid "307fc0b5-7841-4b9a-9515-8d95e86b66fa")
+		(uuid "e0a16d41-a077-40e1-a893-8e2131679b5d")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -67,7 +67,7 @@
 		(at 0 0 0)
 		(layer "Cmts.User")
 		(hide yes)
-		(uuid "dbe50968-864d-4bbb-bdfa-55108236fbc7")
+		(uuid "0d8ff676-0ac9-41d9-b5b8-4f86f5bdc8bc")
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -84,7 +84,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "5f618389-b4bc-4caf-812a-82bf01070d86")
+		(uuid "a26610bf-c7e4-455b-8c2f-97a53bd4a038")
 	)
 	(fp_line
 		(start -1.7 0.4)
@@ -94,7 +94,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "4bee949b-3f74-472e-afb2-c83c114aaa1d")
+		(uuid "788ec80d-8230-4a75-8b65-5f254e58b406")
 	)
 	(fp_line
 		(start -1.4 -0.7)
@@ -104,7 +104,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "cbd7dc08-f087-44e3-b2ff-0b910930fdfa")
+		(uuid "b976a781-0b67-434a-9757-2b4a0f78bf6a")
 	)
 	(fp_line
 		(start -1.4 0.7)
@@ -114,7 +114,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "df2cd960-9351-413c-a2c7-da2e007164fd")
+		(uuid "d3b4b7b5-ccda-416c-a132-b7d61c101672")
 	)
 	(fp_line
 		(start -0.3 -0.7)
@@ -124,7 +124,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "12da4380-6ba8-48ce-8bf0-17e2f07bb872")
+		(uuid "0f1502f3-a502-4aaa-84f7-f5cad61a0ee5")
 	)
 	(fp_line
 		(start 0.09 -0.4)
@@ -134,7 +134,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "cf14c014-dedb-4f71-8304-49986b98b2ef")
+		(uuid "3d8d2171-4b2f-45c6-b487-745851b67895")
 	)
 	(fp_line
 		(start 0.09 -0.002)
@@ -144,7 +144,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "91cefaf6-36dc-4f21-a0eb-c6cdd9a283af")
+		(uuid "23b4383d-0998-43e1-964f-eb76c0456e6b")
 	)
 	(fp_line
 		(start 0.2005 -0.701)
@@ -154,7 +154,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "8d6f8c32-fd1e-4d0e-9e2a-63b4209942ec")
+		(uuid "76cb8974-4b53-4e7e-8bb2-c5277bda25db")
 	)
 	(fp_line
 		(start 1.4705 -0.701)
@@ -164,7 +164,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "367387c6-65e5-4f27-afa3-19821e744b6c")
+		(uuid "4af515f2-a6c1-43c0-a1fb-e0ba2d136639")
 	)
 	(fp_line
 		(start 1.4705 0.701)
@@ -174,7 +174,7 @@
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "d83ff07d-7345-402b-98f3-46cf65552c2b")
+		(uuid "feb94a8e-309c-4e20-ba0c-305f947c2943")
 	)
 	(fp_poly
 		(pts
@@ -186,7 +186,7 @@
 		)
 		(fill yes)
 		(layer "Dwgs.User")
-		(uuid "cc77f55d-874c-4b64-a080-adde2f4483ca")
+		(uuid "807d7c98-3aa0-49c5-a8db-287720a6a02c")
 	)
 	(fp_poly
 		(pts
@@ -198,7 +198,7 @@
 		)
 		(fill yes)
 		(layer "Dwgs.User")
-		(uuid "1e4e4eea-057e-46ef-bb74-bcb9c03cbfe0")
+		(uuid "000849a4-9834-4132-b737-d4bb710ba5ec")
 	)
 	(fp_poly
 		(pts
@@ -210,7 +210,7 @@
 		)
 		(fill yes)
 		(layer "Dwgs.User")
-		(uuid "cc065318-593a-46ab-b6b5-1b76103a4754")
+		(uuid "6d5c8aae-7267-452b-8282-1ce3c3f656af")
 	)
 	(fp_rect
 		(start -1.4 -0.748079)
@@ -221,7 +221,7 @@
 		)
 		(fill no)
 		(layer "F.CrtYd")
-		(uuid "165d6883-2bd9-488f-b79a-e7aae7355d2f")
+		(uuid "2c7e1318-c6b2-4d66-9a11-54676181db5d")
 	)
 	(fp_line
 		(start -0.8 -0.4)
@@ -231,7 +231,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "2e3f114d-679a-4e9d-ab90-340431528df9")
+		(uuid "80db07c9-5698-4107-8ee7-244d1f862c95")
 	)
 	(fp_line
 		(start -0.8 0.4)
@@ -241,7 +241,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "a5a535dd-80ed-4324-9456-b9df50fdc3c0")
+		(uuid "3d1ee447-66de-4dfd-9479-88b5e291b95d")
 	)
 	(fp_line
 		(start 0.8 -0.4)
@@ -251,7 +251,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "4b8f8d24-5760-4cf9-b262-8cc178cf3d16")
+		(uuid "de639755-33cc-48c0-b0b5-079b12ba18c4")
 	)
 	(fp_line
 		(start 0.8 0.4)
@@ -261,7 +261,7 @@
 			(type default)
 		)
 		(layer "F.Fab")
-		(uuid "9df1e938-a344-46da-a6bd-919cf97b0e79")
+		(uuid "13ca0759-beb2-419c-9f9a-704a655cc907")
 	)
 	(fp_poly
 		(pts
@@ -276,7 +276,7 @@
 		)
 		(fill yes)
 		(layer "F.Fab")
-		(uuid "8ac4be5d-c491-4f11-9cba-929016e5797f")
+		(uuid "a46182d0-cf53-4a48-9a47-63866203f3fb")
 	)
 	(fp_poly
 		(pts
@@ -288,7 +288,7 @@
 		)
 		(fill yes)
 		(layer "User.1")
-		(uuid "72a98d51-6d87-48e8-9fb1-45278fb2f64d")
+		(uuid "a68c3e16-bd05-4584-9580-7606f9abed34")
 	)
 	(fp_poly
 		(pts
@@ -300,12 +300,12 @@
 		)
 		(fill yes)
 		(layer "User.1")
-		(uuid "7d53c5a3-05d1-4496-8d63-6e7a5047bac6")
+		(uuid "dd98c2f3-8bbd-4931-931a-e747aca27f4f")
 	)
 	(fp_text user "${REFERENCE}"
 		(at 0 0 0)
 		(layer "F.Fab")
-		(uuid "880fe6db-5fc5-4ff1-b010-feba224684cc")
+		(uuid "2f9e55eb-0708-497f-8940-b5f6be54069f")
 		(effects
 			(font
 				(size 0.5 0.5)
@@ -317,13 +317,13 @@
 		(at 0.75 0)
 		(size 0.8 0.8)
 		(layers "F.Cu" "F.Mask" "F.Paste")
-		(uuid "63f23481-0342-4d35-9827-3ec9b7b3b2b0")
+		(uuid "d498b864-4eb8-45ea-a533-0da12c275039")
 	)
 	(pad "2" smd rect
 		(at -0.75 0)
 		(size 0.8 0.8)
 		(layers "F.Cu" "F.Mask" "F.Paste")
-		(uuid "c0f5f6f5-c563-4078-8994-19edbdcf47d4")
+		(uuid "389cf2cb-9077-4c9b-898a-7fcbe7cd11dc")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/EASYEDA_MODELS/LED0603_L1.6-W0.8-H0.6.step"

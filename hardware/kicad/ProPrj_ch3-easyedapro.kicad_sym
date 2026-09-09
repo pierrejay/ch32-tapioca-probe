@@ -29,7 +29,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -129,7 +129,7 @@
 					(type none)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -147,7 +147,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -195,7 +195,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -361,7 +361,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -461,7 +461,7 @@
 					(type none)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -479,7 +479,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -526,7 +526,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SOD-123_L2.7-W1.6-LS3.7-RD"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOD-123_L2.7-W1.6-LS3.7-RD"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -726,7 +726,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -820,7 +820,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:CONN-TH_A2501HWR-4P"
+		(property "Footprint" "ProPrj_ch3-easyedapro:CONN-TH_A2501HWR-4P"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -920,7 +920,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -2.54 5.08 0)
 				(length 2.54)
 				(name "1"
@@ -938,7 +938,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -2.54 2.54 0)
 				(length 2.54)
 				(name "2"
@@ -956,7 +956,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -2.54 0 0)
 				(length 2.54)
 				(name "3"
@@ -974,7 +974,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -2.54 -2.54 0)
 				(length 2.54)
 				(name "4"
@@ -985,6 +985,247 @@
 					)
 				)
 				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "AP2151WG-7"
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "U"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOT-25-5_L3.0-W1.8-P0.95-LS3.0-BR"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://item.szlcsc.com/datasheet/AP2151WG-7/111687.html"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer Part" "AP2151WG-7"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "DIODES(美台)"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier Part" "C110464"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier" "LCSC"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part Name" "单通道限流电源开关"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "AP2151WG-7_1_0"
+			(rectangle
+				(start -7.62 5.588)
+				(end 7.62 -5.588)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -6.35 4.318)
+				(radius 0.381)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -6.35 4.318)
+				(radius 0.381)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(pin power_out line
+				(at -10.16 2.54 0)
+				(length 2.54)
+				(name "OUT"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin power_in line
+				(at -10.16 0 0)
+				(length 2.54)
+				(name "GND"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin open_collector line
+				(at -10.16 -2.54 0)
+				(length 2.54)
+				(name "FLG"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at 10.16 -2.54 180)
+				(length 2.54)
+				(name "EN"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin power_in line
+				(at 10.16 2.54 180)
+				(length 2.54)
+				(name "IN"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "5"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -1021,7 +1262,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:BAT-TH_BH-123A-A5BJ005"
+		(property "Footprint" "ProPrj_ch3-easyedapro:BAT-TH_BH-123A-A5BJ005"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1197,7 +1438,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:BAT-SMD_BH-14250-B5BA003"
+		(property "Footprint" "ProPrj_ch3-easyedapro:BAT-SMD_BH-14250-B5BA003"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1399,7 +1640,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:BAT-TH_BH-AAA-A1AJ001"
+		(property "Footprint" "ProPrj_ch3-easyedapro:BAT-TH_BH-AAA-A1AJ001"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1613,7 +1854,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LGA-16_L5.2-W4.7-P0.65-TL_CA-IS2062A-FRANK2"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LGA-16_L5.2-W4.7-P0.65-TL_CA-IS2062A-FRANK2"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2041,7 +2282,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:WQFN-20_L3.0-W3.0-P0.40-TL-EP1.7"
+		(property "Footprint" "ProPrj_ch3-easyedapro:WQFN-20_L3.0-W3.0-P0.40-TL-EP1.7"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2152,7 +2393,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin power_in line
 				(at -58.42 11.43 0)
 				(length 2.54)
 				(name "VDD"
@@ -2170,7 +2411,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 8.89 0)
 				(length 2.54)
 				(name "PA0/T2C1/CTS2/A0"
@@ -2188,7 +2429,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 6.35 0)
 				(length 2.54)
 				(name "PA1/RTS2/T2C2/O1N2/O2N2/A1"
@@ -2206,7 +2447,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 3.81 0)
 				(length 2.54)
 				(name "PA2/TX2/T2C3/O2O1/T2ET_/A2"
@@ -2224,7 +2465,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 1.27 0)
 				(length 2.54)
 				(name "PA3/T2C4/O1O0/T3C1_/RX2/A3"
@@ -2242,7 +2483,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 -1.27 0)
 				(length 2.54)
 				(name "PA4/CS/O2O0/T3C2_/A4"
@@ -2260,7 +2501,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 -3.81 0)
 				(length 2.54)
 				(name "PA5/SCK/TX4_/O2N0/A5"
@@ -2278,7 +2519,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 -6.35 0)
 				(length 2.54)
 				(name "PA6/MISO/T3C1/T1BK_/O1N0/A6"
@@ -2296,7 +2537,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 -8.89 0)
 				(length 2.54)
 				(name "PA7/MOSI/T3C2/T1C1N_/O2P0/A7"
@@ -2314,7 +2555,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at -58.42 -11.43 0)
 				(length 2.54)
 				(name "PB0/TX4/T1C2N_/O1P0/A8"
@@ -2332,7 +2573,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 -11.43 180)
 				(length 2.54)
 				(name "PB1/T1C3N_/RX4/O2N1/A9"
@@ -2350,7 +2591,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 -8.89 180)
 				(length 2.54)
 				(name "PB3/TX3/T2C3_/T2C3N_/O2P1"
@@ -2368,7 +2609,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 -6.35 180)
 				(length 2.54)
 				(name "PB11/T1C3/T2C1N_/RX1"
@@ -2386,7 +2627,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 -3.81 180)
 				(length 2.54)
 				(name "PC18/DIO/TX3_/T2C1N_/T3C2_/I2C_"
@@ -2404,7 +2645,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 -1.27 180)
 				(length 2.54)
 				(name "PB12/T1C4_/T2C2N_"
@@ -2422,7 +2663,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 1.27 180)
 				(length 2.54)
 				(name "PC19/DCK/T2C1_/T3C1_/I2C_/RX3_"
@@ -2440,7 +2681,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 3.81 180)
 				(length 2.54)
 				(name "PC16/UDM/T1C4/TX4_/I2C_/RX4_/PC11"
@@ -2458,7 +2699,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 6.35 180)
 				(length 2.54)
 				(name "PC17/UDP/TX4_/I2C_/RX4_/T1ET/PC10"
@@ -2476,7 +2717,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 8.89 180)
 				(length 2.54)
 				(name "PC14/CC1/T1C3_/T2C2_"
@@ -2494,7 +2735,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin bidirectional line
 				(at 58.42 11.43 180)
 				(length 2.54)
 				(name "PC15/CC2/T2C3_/T1ET_"
@@ -2512,7 +2753,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin power_in line
 				(at 0 -16.51 90)
 				(length 2.54)
 				(name "GND"
@@ -2560,7 +2801,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2697,7 +2938,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -2715,8 +2956,211 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 5.08 0 180)
+				(length 2.54)
+				(name "2"
+					(effects
+						(font
+							(size 0.0254 0.0254)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 0.0254 0.0254)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "CL05A106MQ5NUNC"
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "C"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "10uF"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0402"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://item.szlcsc.com/datasheet/CL05A106MQ5NUNC/16204.html"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer Part" "CL05A106MQ5NUNC"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "SAMSUNG(三星)"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier Part" "C15525"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier" "LCSC"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part Name" "10uF ±20% 6.3V"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "CL05A106MQ5NUNC_1_0"
+			(polyline
+				(pts
+					(xy -1.27 0) (xy -0.508 0)
+				)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -0.508 2.032) (xy -0.508 -2.032)
+				)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.508 2.032) (xy 0.508 -2.032)
+				)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.508 0) (xy 1.27 0)
+				)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(pin passive line
+				(at -3.81 0 0)
+				(length 2.54)
+				(name "1"
+					(effects
+						(font
+							(size 0.0254 0.0254)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 0.0254 0.0254)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 3.81 0 180)
 				(length 2.54)
 				(name "2"
 					(effects
@@ -2763,7 +3207,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2900,7 +3344,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -2918,7 +3362,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -2966,7 +3410,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0603"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0603"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3169,7 +3613,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0603"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0603"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3306,7 +3750,7 @@
 					(type none)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -3324,7 +3768,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -3372,7 +3816,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0603"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0603"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3575,7 +4019,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:C0603"
+		(property "Footprint" "ProPrj_ch3-easyedapro:C0603"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3785,7 +4229,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3887,7 +4331,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3981,7 +4425,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:FILTER-SMD_4P-L2.0-W1.3-BL_DLW21"
+		(property "Footprint" "ProPrj_ch3-easyedapro:FILTER-SMD_4P-L2.0-W1.3-BL_DLW21"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4417,7 +4861,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4583,7 +5027,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4749,7 +5193,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:R0402"
+		(property "Footprint" "ProPrj_ch3-easyedapro:R0402"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4922,7 +5366,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5024,7 +5468,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5153,7 +5597,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:OLED-TH_L38.0-W12.0_HS91L02W2C01"
+		(property "Footprint" "ProPrj_ch3-easyedapro:OLED-TH_L38.0-W12.0_HS91L02W2C01"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5354,7 +5798,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:PAD-JUMPER-2-NC_BY_PASTE_YES_SILK"
+		(property "Footprint" "ProPrj_ch3-easyedapro:PAD-JUMPER-2-NC_BY_PASTE_YES_SILK"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5510,7 +5954,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:KEY-TH_4P-L6.0-W6.0-P4.50-LS6.50"
+		(property "Footprint" "ProPrj_ch3-easyedapro:KEY-TH_4P-L6.0-W6.0-P4.50-LS6.50"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5759,7 +6203,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:KEY-SMD_4P-L6.0-W6.0-P4.50-LS10.0"
+		(property "Footprint" "ProPrj_ch3-easyedapro:KEY-SMD_4P-L6.0-W6.0-P4.50-LS10.0"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6043,7 +6487,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:KEY-SMD_4P-L4.2-W3.2-P2.20-LS5.1-TL"
+		(property "Footprint" "ProPrj_ch3-easyedapro:KEY-SMD_4P-L4.2-W3.2-P2.20-LS5.1-TL"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6327,7 +6771,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:KEY-TH_4P-L6.0-W6.0-P3.90-LS7.8"
+		(property "Footprint" "ProPrj_ch3-easyedapro:KEY-TH_4P-L6.0-W6.0-P3.90-LS7.8"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6611,7 +7055,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:KEY-SMD_4P-L6.0-W6.0-P3.90-LS9.0"
+		(property "Footprint" "ProPrj_ch3-easyedapro:KEY-SMD_4P-L6.0-W6.0-P3.90-LS9.0"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6861,7 +7305,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SW-SMD_4P-L6.0-W6.0-P4.50-LS9.0_H5.0"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SW-SMD_4P-L6.0-W6.0-P4.50-LS9.0_H5.0"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7123,7 +7567,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LED-SMD_L1.6-W0.8-R-RD"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LED-SMD_L1.6-W0.8-R-RD"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7284,7 +7728,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 3.81)
 				(name "A"
@@ -7302,7 +7746,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 3.81)
 				(name "K"
@@ -7349,7 +7793,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SOD-523_L1.2-W0.8-LS1.6-BI"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOD-523_L1.2-W0.8-LS1.6-BI"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7475,7 +7919,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -7493,7 +7937,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -7548,7 +7992,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7641,7 +8085,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOT-23-3_L2.9-W1.3-P1.90-LS2.4-BR"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7969,7 +8413,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:HDR-TH_4P-P2.54-H-M-W10.4"
+		(property "Footprint" "ProPrj_ch3-easyedapro:HDR-TH_4P-P2.54-H-M-W10.4"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8069,7 +8513,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 3.81 0)
 				(length 2.54)
 				(name "1"
@@ -8087,7 +8531,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 1.27 0)
 				(length 2.54)
 				(name "2"
@@ -8105,7 +8549,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -5.08 -1.27 0)
 				(length 2.54)
 				(name "3"
@@ -8123,7 +8567,219 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
+				(at -5.08 -3.81 0)
+				(length 2.54)
+				(name "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "PZ254V-11-04P_C2691448"
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "H"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "ProPrj_ch3-easyedapro:HDR-TH_4P-P2.54-V-M"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://item.szlcsc.com/datasheet/PZ254V-11-04P/2801085.html"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer Part" "PZ254V-11-04P"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "XFCN(兴飞)"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier Part" "C2691448"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Supplier" "LCSC"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC Part Name" "1x4P 间距:2.54mm 方针 直插"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "PZ254V-11-04P_C2691448_1_0"
+			(rectangle
+				(start -2.54 6.35)
+				(end 2.54 -6.35)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -1.27 5.08)
+				(radius 0.381)
+				(stroke
+					(width 0.254)
+					(type solid)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(pin input line
+				(at -5.08 3.81 0)
+				(length 2.54)
+				(name "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -5.08 1.27 0)
+				(length 2.54)
+				(name "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -5.08 -1.27 0)
+				(length 2.54)
+				(name "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
 				(at -5.08 -3.81 0)
 				(length 2.54)
 				(name "4"
@@ -8170,7 +8826,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:TSOT-23-5_L2.9-W1.6-P0.95-LS2.8-BL"
+		(property "Footprint" "ProPrj_ch3-easyedapro:TSOT-23-5_L2.9-W1.6-P0.95-LS2.8-BL"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8281,7 +8937,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin power_in line
 				(at -10.16 2.54 0)
 				(length 2.54)
 				(name "VIN"
@@ -8299,7 +8955,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin power_in line
 				(at -10.16 0 0)
 				(length 2.54)
 				(name "GND"
@@ -8317,7 +8973,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin input line
 				(at -10.16 -2.54 0)
 				(length 2.54)
 				(name "EN"
@@ -8335,7 +8991,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin no_connect line
 				(at 10.16 -2.54 180)
 				(length 2.54)
 				(name "NC"
@@ -8353,7 +9009,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin power_out line
 				(at 10.16 2.54 180)
 				(length 2.54)
 				(name "VOUT"
@@ -8400,7 +9056,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SOT-23-5_L3.0-W1.5-P0.95-LS2.8-BL"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOT-23-5_L3.0-W1.5-P0.95-LS2.8-BL"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8630,7 +9286,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9331,7 +9987,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LED-SMD_6P-L2.2-W2.2-BR"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LED-SMD_6P-L2.2-W2.2-BR"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9568,7 +10224,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:TF-SMD_HYCW104-TF08-375B"
+		(property "Footprint" "ProPrj_ch3-easyedapro:TF-SMD_HYCW104-TF08-375B"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9906,7 +10562,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:TF-SMD_TF-123-ARP9H15"
+		(property "Footprint" "ProPrj_ch3-easyedapro:TF-SMD_TF-123-ARP9H15"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10269,7 +10925,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:X1SON-2_L1.0-W0.6-P0.65-BI"
+		(property "Footprint" "ProPrj_ch3-easyedapro:X1SON-2_L1.0-W0.6-P0.65-BI"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10395,7 +11051,7 @@
 					(type none)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at -5.08 0 0)
 				(length 2.54)
 				(name "1"
@@ -10413,7 +11069,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin passive line
 				(at 5.08 0 180)
 				(length 2.54)
 				(name "2"
@@ -10460,7 +11116,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SW-SMD_L3.9-W3.0-P4.45"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SW-SMD_L3.9-W3.0-P4.45"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10650,7 +11306,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5-TL_H1.5"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5-TL_H1.5"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10900,7 +11556,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SW-TH_4P-L6.0-W6.0-P4.50-LS6.5"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SW-TH_4P-L6.0-W6.0-P4.50-LS6.5"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11172,7 +11828,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:USB-C-SMD_TYPE-C-16PIN-2MD-073"
+		(property "Footprint" "ProPrj_ch3-easyedapro:USB-C-SMD_TYPE-C-16PIN-2MD-073"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11272,7 +11928,7 @@
 					(type none)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 8.89 13.97 180)
 				(length 2.54)
 				(name "EH"
@@ -11290,7 +11946,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at 8.89 -13.97 180)
 				(length 2.54)
 				(name "EH"
@@ -11308,7 +11964,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 13.97 0)
 				(length 2.54)
 				(name "GND"
@@ -11326,7 +11982,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 11.43 0)
 				(length 2.54)
 				(name "VBUS"
@@ -11344,7 +12000,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 6.35 0)
 				(length 2.54)
 				(name "CC1"
@@ -11362,7 +12018,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 1.27 0)
 				(length 2.54)
 				(name "Dp1"
@@ -11380,7 +12036,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -1.27 0)
 				(length 2.54)
 				(name "Dn1"
@@ -11398,7 +12054,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -6.35 0)
 				(length 2.54)
 				(name "SBU1"
@@ -11416,7 +12072,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -13.97 0)
 				(length 2.54)
 				(name "GND"
@@ -11434,7 +12090,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -11.43 0)
 				(length 2.54)
 				(name "VBUS"
@@ -11452,7 +12108,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -8.89 0)
 				(length 2.54)
 				(name "CC2"
@@ -11470,7 +12126,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 -3.81 0)
 				(length 2.54)
 				(name "Dp2"
@@ -11488,7 +12144,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 3.81 0)
 				(length 2.54)
 				(name "Dn2"
@@ -11506,7 +12162,7 @@
 					)
 				)
 			)
-			(pin unspecified line
+			(pin passive line
 				(at -8.89 8.89 0)
 				(length 2.54)
 				(name "SBU2"
@@ -11553,7 +12209,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LED-SMD_4P-L1.0-W1.0_TZ-H1010-RGB-A-BU08UF-TA1305NA-W109"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LED-SMD_4P-L1.0-W1.0_TZ-H1010-RGB-A-BU08UF-TA1305NA-W109"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11765,7 +12421,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL"
+		(property "Footprint" "ProPrj_ch3-easyedapro:SOT-23-6_L2.9-W1.6-P0.95-LS2.8-BL"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12021,7 +12677,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:"
+		(property "Footprint" ""
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12115,7 +12771,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:CONN-TH_3P-P3.81_WJ15EDGRC-3.81-3P"
+		(property "Footprint" "ProPrj_ch3-easyedapro:CONN-TH_3P-P3.81_WJ15EDGRC-3.81-3P"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12298,7 +12954,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:HDR-SMD_4P-P2.54-H-M-W13.3-N"
+		(property "Footprint" "ProPrj_ch3-easyedapro:HDR-SMD_4P-P2.54-H-M-W13.3-N"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12510,7 +13166,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LED-SMD_4P-L5.0-W5.0-TL-1"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LED-SMD_4P-L5.0-W5.0-TL-1"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12711,7 +13367,7 @@
 				)
 			)
 		)
-		(property "Footprint" "ch32x035_t-easyedapro:LED-SMD_XL-C3014SURC-1"
+		(property "Footprint" "ProPrj_ch3-easyedapro:LED-SMD_XL-C3014SURC-1"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12934,5 +13590,184 @@
 			)
 		)
 		(embedded_fonts no)
+	)
+	(symbol "TestPoint"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0.762)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(property "Reference" "TP"
+			(at 0 6.858 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "TestPoint"
+			(at 0 5.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 5.08 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 5.08 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Point de test"
+			(at 0 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "TestPoint_0_1"
+			(circle
+				(center 0 3.302)
+				(radius 0.762)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "TestPoint_1_1"
+			(pin passive line
+				(at 0 0 90)
+				(length 2.54)
+				(name "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+	)
+	(symbol "PWR_FLAG"
+		(power global)
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(property "Reference" "#FLG"
+			(at 0 1.905 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 0 3.81 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Indique a l'ERC d'ou vient l'alimentation"
+			(at 0 0 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "PWR_FLAG_0_0"
+			(pin power_out line
+				(at 0 0 90)
+				(length 0)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(symbol "PWR_FLAG_0_1"
+			(polyline
+				(pts
+					(xy 0 0) (xy 0 1.27) (xy -1.016 1.905) (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
 	)
 )

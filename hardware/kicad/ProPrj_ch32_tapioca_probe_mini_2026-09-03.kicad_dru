@@ -1,5 +1,6 @@
 (version 1)
-#Kicad 7
+# JLCPCB 4 couches / 1oz ext + 0.5oz int - valide sur KiCad 10.0.4
+# ATTENTION: (layer "?.Silkscreen") du fichier amont casse TOUT le fichier en silence -> corrige en "*.SilkS"
 
 # ----------------------------------- Minimum trace width and spacing (PICK ONE) --------------------
 
@@ -10,15 +11,15 @@
 #	(condition "A.Type == 'track'"))
 
 # 2-layer, 1oz copper
-(rule "Minimum Trace Width and Spacing (outer layer)"
-	(constraint track_width (min 0.127mm))
-	(condition "A.Type == 'track'"))
+#(rule "Minimum Trace Width and Spacing (outer layer)"
+#	(constraint track_width (min 0.127mm))
+#	(condition "A.Type == 'track'"))
 
 # 4-layer , 1oz and 0.5oz copper
-#(rule "Minimum Trace Width and Spacing"
-#	(constraint track_width (min 0.09mm))
-#	(constraint clearance (min 0.09mm))
-#	(condition "A.Type == 'track'"))
+# NB: pas de (constraint clearance) ici -> sinon le remplissage de zone devient non homogene
+(rule "Minimum Trace Width and Spacing"
+	(constraint track_width (min 0.09mm))
+	(condition "A.Type == 'track'"))
 
 # ------------------------------------------------------------------------------------------------------
 
@@ -77,7 +78,7 @@
 	(constraint hole_size (min 0.5mm))
 	(constraint annular_width (min 0.25mm))
 	(condition "A.Type == 'Pad' && A.isPlated()"))
-
+	
 (rule "Minimum Castellated Hole Size"
 	(constraint hole_size (min 0.6mm))
 	(condition "A.Type == 'pad' && A.Fabrication_Property == 'Castellated pad'"))
@@ -150,9 +151,14 @@
 	(layer outer)
 	(condition "A.Type == 'pad' && (B.Type == 'text' || B.Type == 'graphic')"))
 
-# ----------------------------------- Exceptions projet ------------------------------------
-# Le connecteur USB-C est monte dans sa propre decoupe, incluse dans son empreinte.
-# Ses pads de blindage sont a 0.173mm de cette decoupe : normal et deja fabrique.
+# ----------------------------------- Exceptions projet -------------------------------------
+# Le connecteur USB-C porte ses propres decoupes (pattes de fixation) : il touche le bord par construction.
 (rule "USB2 edge clearance exception"
 	(constraint edge_clearance (min 0.15mm))
 	(condition "A.Reference == 'USB2'"))
+
+# Espacement piste <-> piste : 0.12mm, porte par la netclass Default du .kicad_pro
+# (valeur du template). Ce stackup 4 couches en a besoin pour tenir les 90 ohms
+# differentiels sur USB_DP/USB_DN, qui sont routees pile a 0.120mm.
+# Pas de (constraint clearance) ici : la netclass suffit, et une regle globale de
+# clearance rendrait le remplissage de zone non homogene.

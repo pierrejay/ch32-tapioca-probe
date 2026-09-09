@@ -13,8 +13,8 @@ The project is based on [ch32fun](https://github.com/cnlohr/ch32fun) and reuses
 the proven PIOC primitives from the sibling
 [Tapioca](https://github.com/pierrejay/ch32-tapioca) project.
 
-A [reference design](hardware/README.md) of a tiny <€5 probe PCB (ARM SWD,
-WCH RVSWIO & RVSWD) is also provided with EasyEDA & KiCad source files.
+A [reference design](hardware/README.md) of a tiny <€6 probe PCB (debug/JTAG, UART bridge, 
+switchable 3V3 output) is also provided with EasyEDA & KiCad source files.
 
 <img src="hardware/pcb_pic_probe.png" alt="CH32 Tapioca Probe reference board" width="300">
 
